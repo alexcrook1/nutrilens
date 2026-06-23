@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -7,8 +7,8 @@ export default async function handler(req, res) {
 
   try {
     const { date } = req.body;
-    const rangeStart = `${date}T00:00:00`;
-    const rangeEnd = `${date}T23:59:59`;
+    const rangeStart = date + "T00:00:00";
+    const rangeEnd   = date + "T23:59:59";
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -23,16 +23,12 @@ export default async function handler(req, res) {
         mcp_servers: [{ type: "url", url: "https://mcp.strava.com/mcp", name: "strava" }],
         messages: [{
           role: "user",
-          content: `Use the strava list_activities tool with range_start="${rangeStart}" and range_end="${rangeEnd}".
-Return ONLY a JSON array, no markdown, no explanation:
-[{"id":"...","name":"...","sport_type":"...","distance_m":number,"moving_time_s":number,"calories":number,"elevation_m":number}]
-Use summary.total_calories for calories, summary.distance for distance_m, summary.moving_time for moving_time_s, summary.elevation_gain for elevation_m.
-If no activities return [].`
+          content: "Use the strava list_activities tool with range_start="" + rangeStart + "" and range_end="" + rangeEnd + "". Return ONLY a JSON array, no markdown: [{"id":"...","name":"...","sport_type":"...","distance_m":number,"moving_time_s":number,"calories":number,"elevation_m":number}]. If no activities return []."
         }]
       }),
     });
 
-    if (!response.ok) throw new Error(`Anthropic API error ${response.status}`);
+    if (!response.ok) throw new Error("Anthropic API error " + response.status);
     const data = await response.json();
     const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("");
     const match = text.match(/\[[\s\S]*?\]/);
@@ -41,4 +37,4 @@ If no activities return [].`
   } catch (err) {
     return res.status(500).json({ error: err.message, activities: [] });
   }
-}
+};
