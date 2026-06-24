@@ -949,13 +949,24 @@ function closeModal(id) { document.getElementById(id).style.display="none"; }
 
 function handlePhoto(input) {
   const file=input.files[0]; if(!file) return;
+  const img=new Image();
   const reader=new FileReader();
   reader.onload=ev=>{
-    const [hdr,b64]=ev.target.result.split(",");
-    pendingPhoto={base64:b64,mime:hdr.match(/:(.*?);/)[1],preview:ev.target.result};
-    document.getElementById("photoPrev").src=ev.target.result;
-    document.getElementById("photoPrev").style.display="block";
-    document.getElementById("removePhoto").style.display="inline-block";
+    img.onload=()=>{
+      const MAX=1024;
+      let w=img.width, h=img.height;
+      if(w>MAX||h>MAX){ if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;} }
+      const canvas=document.createElement("canvas");
+      canvas.width=w; canvas.height=h;
+      canvas.getContext("2d").drawImage(img,0,0,w,h);
+      const compressed=canvas.toDataURL("image/jpeg",0.7);
+      const[hdr,b64]=compressed.split(",");
+      pendingPhoto={base64:b64,mime:"image/jpeg",preview:compressed};
+      document.getElementById("photoPrev").src=compressed;
+      document.getElementById("photoPrev").style.display="block";
+      document.getElementById("removePhoto").style.display="inline-block";
+    };
+    img.src=ev.target.result;
   };
   reader.readAsDataURL(file);
 }
