@@ -176,16 +176,12 @@ select.input{appearance:none}
       <div class="modal-title" id="logModalTitle">Log Meal or Drink</div>
       <button class="modal-close" onclick="closeModal('logModal')">×</button>
     </div>
-    <!-- Type selector -->
+    <!-- Type selector: simple food/drink toggle -->
     <div class="mb8">
       <label class="label">What are you logging?</label>
       <div class="type-row">
         <button class="type-pill selected" onclick="setLogType('food')" id="typeFood">🍽 Food</button>
-        <button class="type-pill" onclick="setLogType('water')" id="typeWater">💧 Water</button>
-        <button class="type-pill" onclick="setLogType('coffee')" id="typeCoffee">☕ Coffee/Tea</button>
-        <button class="type-pill" onclick="setLogType('juice')" id="typeJuice">🥤 Juice/Soft drink</button>
-        <button class="type-pill" onclick="setLogType('alcohol')" id="typeAlcohol">🍺 Alcohol</button>
-        <button class="type-pill" onclick="setLogType('other')" id="typeOther">🥛 Other drink</button>
+        <button class="type-pill" onclick="setLogType('drink')" id="typeDrink">🥤 Drink</button>
       </div>
     </div>
     <div class="mb12">
@@ -781,15 +777,16 @@ function doneCheckin(){
 function setLogType(type) {
   logType=type;
   document.querySelectorAll(".type-pill").forEach(p=>p.classList.remove("selected"));
-  document.getElementById("type"+type.charAt(0).toUpperCase()+type.slice(1))?.classList.add("selected");
+  const btnId = type==="food"?"typeFood":"typeDrink";
+  document.getElementById(btnId)?.classList.add("selected");
   const isFood=type==="food";
   document.getElementById("logModalTitle").textContent=isFood?"Log Food":"Log Drink";
-  document.getElementById("logDesc").placeholder=isFood?"e.g. Greek salad with halloumi, olives and olive oil…":"e.g. Large flat white, 500ml water, glass of orange juice…";
-  document.getElementById("photoHint").textContent=isFood?"— recommended for complex meals":"— optional for drinks";
+  document.getElementById("logDesc").placeholder=isFood?"e.g. Greek salad with halloumi, olives and olive oil…":"e.g. Large flat white, bottle of water, glass of orange juice… The AI will identify it";
+  document.getElementById("photoHint").textContent=isFood?"— recommended for complex meals":"— great for drinks, AI identifies from photo";
 }
 
 function openLogModal(type="food") {
-  logType=type||"food"; pendingLog=null; pendingPhoto=null;
+  logType=(type==="food"||type==="drink")?type:"drink"; pendingLog=null; pendingPhoto=null;
   document.getElementById("logDesc").value="";
   document.getElementById("photoPrev").style.display="none";
   document.getElementById("removePhoto").style.display="none";
@@ -857,11 +854,12 @@ Context: ${PROFILE.context}
 Reply ONLY valid JSON no markdown:
 {"calories":number,"protein":number,"carbs":number,"fat":number,"name":"short name","confidence":"low|medium|high","notes":"one insight for their goal","macroTip":"specific tip","micros":{"zinc":"low|ok|high","vitD":"low|ok|high","magnesium":"low|ok|high","iron":"low|ok|high","omega3":"low|ok|high"}}`;
     } else {
-      prompt=`Nutrition expert. Analyse this drink for someone in Cyprus (hot climate, needs 2500ml hydration daily).
-Type hint: ${logType}. ${desc?"Description: "+desc:"Image only."}
-Estimate volume, hydration value (coffee counts less due to diuretic effect), caffeine, and calories.
+      prompt=`Nutrition expert. Identify and analyse this drink for someone in Cyprus (hot climate, needs 2500ml hydration daily).
+${desc?"Description: "+desc:"Image only — identify the drink from the photo."}
+Estimate volume, hydration value (water=100%, juice=85%, milk=90%, coffee/tea=60% due to mild diuretic effect, alcohol=0%), caffeine, and calories.
+If you cannot identify the drink from the info given, set "needsClarification" to a short question to ask the user.
 Reply ONLY valid JSON no markdown:
-{"name":"drink name","volume_ml":number,"hydration_ml":number,"caffeine_mg":number,"calories":number,"confidence":"low|medium|high","notes":"one relevant tip e.g. good hydration choice or caffeine warning"}`;
+{"name":"drink name","drink_type":"water|coffee|tea|juice|alcohol|milk|smoothie|other","volume_ml":number,"hydration_ml":number,"caffeine_mg":number,"calories":number,"confidence":"low|medium|high","notes":"one relevant tip","needsClarification":null}`;
     }
     content.push({type:"text",text:prompt});
 
@@ -869,9 +867,10 @@ Reply ONLY valid JSON no markdown:
     if(!r.ok) throw new Error("API "+r.status);
     const d=await r.json();
     const text=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
-    const m=text.match(/\{[\s\S]*?\}/);
-    if(!m) throw new Error("No JSON in response");
-    pendingLog=JSON.parse(m[0]);
+    // Find outermost JSON object (handles nested objects like micros:{})
+    const start=text.indexOf("{"), end=text.lastIndexOf("}");
+    if(start===-1||end===-1) throw new Error("No JSON in response");
+    pendingLog=JSON.parse(text.slice(start,end+1));
     pendingLog._isFood=isFood;
 
     const cc={high:"var(--green)",medium:"var(--yellow)",low:"var(--red)"}[pendingLog.confidence]||"var(--subtle)";
@@ -913,10 +912,20 @@ function confirmLog() {
   if(!pendingLog) return;
   const t=today(), desc=document.getElementById("logDesc").value.trim();
   const isFood=pendingLog._isFood;
+  // Handle clarification request
+  if(!isFood && pendingLog.needsClarification) {
+    const answer = prompt(pendingLog.needsClarification);
+    if(answer) {
+      document.getElementById("logDesc").value += " — " + answer;
+      resetLog();
+      analyseLog();
+      return;
+    }
+  }
   const entry={
     id:Date.now().toString(),
     time:new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),
-    type:isFood?"food":logType,
+    type:isFood?"food":(pendingLog.drink_type||"drink"),
     name:pendingLog.name||desc,
     confidence:pendingLog.confidence,
     notes:pendingLog.notes,
