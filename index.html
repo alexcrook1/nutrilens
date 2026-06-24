@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="NutriLens">
 <meta name="theme-color" content="#080d1a">
+<link rel="manifest" href="/manifest.json">
 <title>NutriLens</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -14,33 +15,25 @@
   --bg:#080d1a;--surface:#0d1526;--surface2:#111d33;--border:#1a2540;--muted:#243050;
   --subtle:#3d5070;--secondary:#6b84a8;--text:#dce8f5;--bright:#f0f7ff;
   --purple:#7c6ff7;--purple2:#a78bfa;--blue:#38bdf8;--teal:#2dd4bf;
-  --orange:#f97316;--green:#22d3a0;--red:#f46060;--yellow:#fbbf24;
+  --orange:#f97316;--green:#22d3a0;--red:#f46060;--yellow:#fbbf24;--strava:#f97316;
   --safe-top:env(safe-area-inset-top,0px);--safe-bot:env(safe-area-inset-bottom,0px)
 }
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-serif;overflow:hidden}
 #app{height:100%;display:flex;flex-direction:column;max-width:430px;margin:0 auto}
-
-/* ── Header ── */
 .hdr{padding:calc(var(--safe-top) + 12px) 18px 0;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0}
 .hdr-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .logo{font-size:20px;font-weight:700;letter-spacing:-.5px;color:var(--bright)}
 .logo span{color:var(--purple2)}
+.hdr-right{display:flex;align-items:center;gap:8px}
 .mode-pill{background:var(--muted);border-radius:20px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--purple2);display:flex;align-items:center;gap:5px;border:none;cursor:pointer}
 .tabs{display:flex;overflow-x:auto;scrollbar-width:none;gap:2px}
 .tabs::-webkit-scrollbar{display:none}
-.tab{padding:9px 14px;font-size:12px;font-weight:600;background:none;border:none;border-bottom:2px solid transparent;color:var(--subtle);cursor:pointer;white-space:nowrap;transition:all .2s;letter-spacing:.01em}
+.tab{padding:9px 14px;font-size:12px;font-weight:600;background:none;border:none;border-bottom:2px solid transparent;color:var(--subtle);cursor:pointer;white-space:nowrap;transition:all .2s}
 .tab.active{color:var(--purple2);border-bottom-color:var(--purple2)}
-
-/* ── Content ── */
 .content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--safe-bot)+24px)}
-
-/* ── Cards ── */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:16px;margin:12px 14px 0}
 .card-sm{background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:12px}
 .card-title{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--subtle);margin-bottom:12px}
-.card-accent{border-color:rgba(124,111,247,.3)}
-
-/* ── Morning check-in ── */
 .checkin{background:linear-gradient(135deg,#0d1a3a,#1a1040);border:1px solid rgba(124,111,247,.4);border-radius:18px;padding:16px;margin:12px 14px 0}
 .checkin-title{font-size:13px;font-weight:700;color:var(--bright);margin-bottom:12px}
 .tap-row{display:flex;gap:6px;margin-bottom:10px}
@@ -49,131 +42,82 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
 .tap-item-num{font-size:16px;font-weight:700;color:var(--text)}
 .tap-item-label{font-size:9px;color:var(--subtle);margin-top:2px}
 .tap-label{font-size:11px;color:var(--secondary);margin-bottom:6px}
-
-/* ── Ring ── */
 .ring-wrap{position:relative;flex-shrink:0}
 .ring-wrap svg{transform:rotate(-90deg);display:block}
 .ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .ring-num{font-size:26px;font-weight:700;color:var(--bright);line-height:1;letter-spacing:-1px}
 .ring-sub{font-size:10px;color:var(--subtle);margin-top:2px}
-
-/* ── Balance ── */
 .balance-big{font-size:30px;font-weight:700;letter-spacing:-1px;line-height:1}
 .balance-label{font-size:11px;color:var(--subtle);margin-top:4px}
 .stats-mini{font-size:11px;color:var(--subtle);line-height:2;margin-top:10px}
 .stats-mini span{color:var(--secondary)}
-
-/* ── Macro bars ── */
 .mbar{margin-bottom:9px}
 .mbar-top{display:flex;justify-content:space-between;font-size:11px;color:var(--secondary);margin-bottom:3px}
 .mbar-val{color:var(--text);font-weight:600}
 .mbar-track{height:5px;background:var(--border);border-radius:3px;overflow:hidden}
 .mbar-fill{height:100%;border-radius:3px;transition:width .5s ease}
-
-/* ── Quick log strip ── */
 .quick-strip{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:0 14px;margin-top:12px}
 .quick-strip::-webkit-scrollbar{display:none}
 .quick-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 10px;text-align:center;flex-shrink:0;cursor:pointer;transition:all .15s;min-width:72px;border:none}
 .quick-card:active{transform:scale(.96)}
 .quick-card-icon{font-size:24px;display:block;margin-bottom:4px}
 .quick-card-label{font-size:10px;color:var(--secondary);font-weight:600}
-
-/* ── Water tracker ── */
-.water-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px}
-.water-drop{font-size:22px;cursor:pointer;transition:transform .1s;line-height:1}
-.water-drop:active{transform:scale(1.3)}
-.water-drop.empty{opacity:.25;filter:grayscale(1)}
-
-/* ── Buttons ── */
 .btn{padding:10px 18px;border-radius:11px;border:none;cursor:pointer;font-size:13px;font-weight:600;transition:opacity .15s;font-family:inherit}
 .btn:active{opacity:.7}
 .btn-primary{background:var(--purple);color:#fff}
 .btn-secondary{background:var(--muted);color:var(--text)}
 .btn-ghost{background:transparent;color:var(--subtle)}
-.btn-teal{background:rgba(45,212,191,.15);color:var(--teal);border:1px solid rgba(45,212,191,.3)}
 .btn-sm{padding:6px 12px;font-size:12px;border-radius:9px}
 .btn-full{width:100%}
-
-/* ── Meal items ── */
-.meal-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
-.meal-item:last-child{border-bottom:none}
-.meal-thumb{width:44px;height:44px;border-radius:8px;object-fit:cover;flex-shrink:0}
-.meal-icon{width:44px;height:44px;border-radius:8px;background:var(--muted);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px}
-.meal-name{font-size:13px;font-weight:600;color:var(--bright)}
-.meal-meta{font-size:11px;color:var(--subtle);margin-top:2px;line-height:1.5}
+.log-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.log-item:last-child{border-bottom:none}
+.log-thumb{width:44px;height:44px;border-radius:8px;object-fit:cover;flex-shrink:0}
+.log-icon{width:44px;height:44px;border-radius:8px;background:var(--muted);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px}
+.log-name{font-size:13px;font-weight:600;color:var(--bright)}
+.log-meta{font-size:11px;color:var(--subtle);margin-top:2px;line-height:1.5}
 .del-btn{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0 0 0 6px;line-height:1;flex-shrink:0}
-
-/* ── Activity ── */
 .act-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
 .act-item:last-child{border-bottom:none}
 .act-emoji{font-size:26px;line-height:1;width:36px;text-align:center}
 .act-cal{font-size:18px;font-weight:700;color:var(--orange)}
-
-/* ── Insight card ── */
 .insight{background:linear-gradient(135deg,#0d1f35,#0d1a2a);border:1px solid rgba(56,189,248,.2);border-radius:14px;padding:14px;margin-top:10px}
-.insight-icon{font-size:22px;margin-bottom:6px}
-.insight-text{font-size:13px;color:var(--text);line-height:1.6}
 .insight-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);margin-bottom:6px}
-
-/* ── Progress ── */
+.insight-text{font-size:13px;color:var(--text);line-height:1.6}
 .prog-track{height:8px;background:var(--border);border-radius:4px;overflow:hidden;margin:8px 0}
 .prog-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--purple),var(--teal));transition:width .6s ease}
-
-/* ── Stat rows ── */
 .stat-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px}
 .stat-row:last-child{border-bottom:none}
 .stat-label{color:var(--secondary)}
 .stat-val{font-weight:600}
-
-/* ── Badge ── */
 .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
-
-/* ── Inputs ── */
 .input{background:var(--muted);border:1px solid var(--border);border-radius:11px;padding:11px 14px;color:var(--text);font-size:15px;width:100%;outline:none;-webkit-appearance:none;font-family:inherit}
 .input::placeholder{color:var(--subtle)}
 textarea.input{resize:none}
 select.input{appearance:none}
 .label{font-size:12px;color:var(--subtle);margin-bottom:6px;display:block}
-
-/* ── Modals ── */
 .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:flex;align-items:flex-end}
 .modal{background:var(--surface);border:1px solid var(--border);border-radius:22px 22px 0 0;padding:20px;width:100%;max-height:90vh;overflow-y:auto;padding-bottom:calc(var(--safe-bot)+20px)}
 .modal-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
 .modal-title{font-size:16px;font-weight:700;color:var(--bright)}
 .modal-close{background:none;border:none;color:var(--subtle);font-size:22px;cursor:pointer;line-height:1}
-
-/* ── Macro grid ── */
 .macro-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .macro-cell{background:var(--bg);border-radius:10px;padding:10px 4px;text-align:center}
 .macro-num{font-size:20px;font-weight:700;line-height:1}
 .macro-lbl{font-size:9px;color:var(--subtle);margin-top:3px}
-
-/* ── Quick activity grid ── */
 .quick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
 .quick-act{background:var(--muted);border:none;border-radius:12px;padding:12px 6px;text-align:center;cursor:pointer;transition:background .15s}
 .quick-act:active{background:var(--subtle)}
 .quick-act-e{font-size:24px;display:block;margin-bottom:4px}
 .quick-act-l{font-size:11px;color:var(--secondary)}
-
-/* ── Chart ── */
-.chart-wrap{width:100%}
-
-/* ── Goal mode selector ── */
 .mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .mode-card{background:var(--muted);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;cursor:pointer;transition:all .2s;border:none}
 .mode-card.active{background:rgba(124,111,247,.2);border:1px solid var(--purple)}
 .mode-emoji{font-size:24px;display:block;margin-bottom:4px}
 .mode-name{font-size:12px;font-weight:700;color:var(--text)}
 .mode-desc{font-size:10px;color:var(--subtle);margin-top:2px}
-
-/* ── Error ── */
 .err{background:rgba(244,96,96,.1);border:1px solid rgba(244,96,96,.3);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--red);margin-bottom:10px}
-
-/* ── Spinner ── */
 .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--muted);border-top-color:var(--purple);border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes sp{to{transform:rotate(360deg)}}
-
-/* ── Utilities ── */
 .row{display:flex;align-items:center;gap:8px}
 .f1{flex:1}
 .mt4{margin-top:4px}.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}
@@ -182,17 +126,25 @@ select.input{appearance:none}
 .tr{text-align:right}.tc{text-align:center}
 .bold{font-weight:700}.sm{font-size:13px}.xs{font-size:11px}
 .c-subtle{color:var(--subtle)}.c-sec{color:var(--secondary)}.c-bright{color:var(--bright)}
-.c-green{color:var(--green)}.c-red{color:var(--red)}.c-orange{color:var(--orange)}.c-teal{color:var(--teal)}.c-purple{color:var(--purple2)}
+.c-green{color:var(--green)}.c-red{color:var(--red)}.c-orange{color:var(--orange)}
+.c-teal{color:var(--teal)}.c-purple{color:var(--purple2)}.c-blue{color:var(--blue)}
 .photo-prev{width:54px;height:54px;border-radius:8px;object-fit:cover}
-
-/* ── Energy dots ── */
-.edot{width:10px;height:10px;border-radius:50%;background:var(--muted);cursor:pointer;transition:background .15s;border:none}
-.edot.on{background:var(--yellow)}
-
-/* ── History bars ── */
 .hbar-wrap{display:flex;align-items:flex-end;gap:4px;height:60px;margin-top:8px}
 .hbar{flex:1;border-radius:3px 3px 0 0;transition:height .4s ease;min-height:3px}
 .hbar-label{font-size:9px;color:var(--subtle);text-align:center;margin-top:4px}
+.empty{text-align:center;color:var(--muted);font-size:13px;padding:16px 0}
+/* Drink type pill */
+.type-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.type-pill{background:var(--muted);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;border:none;color:var(--secondary)}
+.type-pill.selected{background:rgba(56,189,248,.2);border:1px solid var(--blue);color:var(--blue)}
+/* Hydration bar */
+.hydro-bar{height:10px;background:var(--border);border-radius:5px;overflow:hidden;margin:8px 0}
+.hydro-fill{height:100%;border-radius:5px;transition:width .5s ease;background:linear-gradient(90deg,var(--blue),var(--teal))}
+/* Micro badge */
+.micro-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.micro-badge{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600}
+/* Measurement */
+.meas-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 </style>
 </head>
 <body>
@@ -200,10 +152,11 @@ select.input{appearance:none}
   <div class="hdr">
     <div class="hdr-top">
       <div class="logo">Nutri<span>Lens</span> 🔬</div>
-      <button class="mode-pill" onclick="openModal('modeModal')">
-        <span id="modeEmoji">🔥</span>
-        <span id="modeName">Fat Loss</span>
-      </button>
+      <div class="hdr-right">
+        <button class="mode-pill" onclick="openModal('modeModal')">
+          <span id="modeEmoji">🔥</span><span id="modeName">Fat Loss</span>
+        </button>
+      </div>
     </div>
     <div class="tabs">
       <button class="tab active" data-tab="today" onclick="switchTab('today')">Today</button>
@@ -216,19 +169,31 @@ select.input{appearance:none}
   <div class="content" id="content"></div>
 </div>
 
-<!-- ── MEAL MODAL ── -->
-<div class="backdrop" id="mealModal" style="display:none">
+<!-- LOG MODAL (food + drink combined) -->
+<div class="backdrop" id="logModal" style="display:none">
   <div class="modal">
     <div class="modal-hdr">
-      <div class="modal-title">Log a Meal</div>
-      <button class="modal-close" onclick="closeModal('mealModal')">×</button>
+      <div class="modal-title" id="logModalTitle">Log Meal or Drink</div>
+      <button class="modal-close" onclick="closeModal('logModal')">×</button>
+    </div>
+    <!-- Type selector -->
+    <div class="mb8">
+      <label class="label">What are you logging?</label>
+      <div class="type-row">
+        <button class="type-pill selected" onclick="setLogType('food')" id="typeFood">🍽 Food</button>
+        <button class="type-pill" onclick="setLogType('water')" id="typeWater">💧 Water</button>
+        <button class="type-pill" onclick="setLogType('coffee')" id="typeCoffee">☕ Coffee/Tea</button>
+        <button class="type-pill" onclick="setLogType('juice')" id="typeJuice">🥤 Juice/Soft drink</button>
+        <button class="type-pill" onclick="setLogType('alcohol')" id="typeAlcohol">🍺 Alcohol</button>
+        <button class="type-pill" onclick="setLogType('other')" id="typeOther">🥛 Other drink</button>
+      </div>
     </div>
     <div class="mb12">
-      <label class="label">Describe the meal</label>
-      <textarea class="input" id="mealDesc" rows="3" placeholder="e.g. Greek salad with halloumi, olives, cucumber and olive oil…"></textarea>
+      <label class="label">Describe it <span class="xs c-subtle">(e.g. "large flat white" or "500ml water")</span></label>
+      <textarea class="input" id="logDesc" rows="2" placeholder="e.g. Large flat white with oat milk…"></textarea>
     </div>
     <div class="mb12">
-      <label class="label">Photo — strongly recommended for complex meals</label>
+      <label class="label">Photo <span class="xs c-subtle" id="photoHint">— recommended for food & complex drinks</span></label>
       <div class="row">
         <button class="btn btn-secondary btn-sm" onclick="document.getElementById('photoIn').click()">📷 Photo</button>
         <img id="photoPrev" class="photo-prev" style="display:none">
@@ -236,178 +201,151 @@ select.input{appearance:none}
       </div>
       <input type="file" id="photoIn" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto(this)">
     </div>
-    <div id="mealErr" class="err" style="display:none"></div>
-    <div id="mealResult" style="display:none">
+    <div id="logErr" class="err" style="display:none"></div>
+    <div id="logResult" style="display:none">
       <div style="background:var(--muted);border-radius:14px;padding:14px;margin-bottom:14px">
-        <div class="row mb8">
-          <div class="f1 bold c-bright" id="rName"></div>
-          <span class="badge" id="rConf"></span>
+        <div class="row mb8"><div class="f1 bold c-bright" id="rName"></div><span class="badge" id="rConf"></span></div>
+        <div id="rFoodMacros" style="display:none">
+          <div class="macro-grid mb8">
+            <div class="macro-cell"><div class="macro-num c-purple" id="rCal"></div><div class="macro-lbl">kcal</div></div>
+            <div class="macro-cell"><div class="macro-num" style="color:var(--purple2)" id="rPro"></div><div class="macro-lbl">protein g</div></div>
+            <div class="macro-cell"><div class="macro-num c-teal" id="rCarb"></div><div class="macro-lbl">carbs g</div></div>
+            <div class="macro-cell"><div class="macro-num c-orange" id="rFat"></div><div class="macro-lbl">fat g</div></div>
+          </div>
+          <div class="micro-row" id="rMicros"></div>
         </div>
-        <div class="macro-grid">
-          <div class="macro-cell"><div class="macro-num c-purple" id="rCal"></div><div class="macro-lbl">kcal</div></div>
-          <div class="macro-cell"><div class="macro-num" style="color:var(--purple2)" id="rPro"></div><div class="macro-lbl">protein g</div></div>
-          <div class="macro-cell"><div class="macro-num c-teal" id="rCarb"></div><div class="macro-lbl">carbs g</div></div>
-          <div class="macro-cell"><div class="macro-num c-orange" id="rFat"></div><div class="macro-lbl">fat g</div></div>
+        <div id="rDrinkInfo" style="display:none">
+          <div class="row" style="gap:16px;flex-wrap:wrap">
+            <div class="macro-cell" style="background:var(--bg);border-radius:10px;padding:8px 12px"><div class="macro-num c-blue" id="rMl"></div><div class="macro-lbl">ml volume</div></div>
+            <div class="macro-cell" style="background:var(--bg);border-radius:10px;padding:8px 12px"><div class="macro-num c-teal" id="rHydro"></div><div class="macro-lbl">hydration ml</div></div>
+            <div class="macro-cell" style="background:var(--bg);border-radius:10px;padding:8px 12px"><div class="macro-num c-orange" id="rCaff"></div><div class="macro-lbl">caffeine mg</div></div>
+            <div class="macro-cell" style="background:var(--bg);border-radius:10px;padding:8px 12px"><div class="macro-num c-purple" id="rDrinkCal"></div><div class="macro-lbl">kcal</div></div>
+          </div>
         </div>
         <div class="xs c-subtle mt8" id="rNotes"></div>
-        <div class="xs mt8" id="rMacroTip" style="color:var(--teal)"></div>
+        <div class="xs c-teal mt8" id="rTip"></div>
       </div>
       <div class="row">
-        <button class="btn btn-secondary f1" onclick="resetMeal()">Re-analyse</button>
-        <button class="btn btn-primary" style="flex:2" onclick="confirmMeal()">Add to log</button>
+        <button class="btn btn-secondary f1" onclick="resetLog()">Re-analyse</button>
+        <button class="btn btn-primary" style="flex:2" onclick="confirmLog()">Add to log</button>
       </div>
     </div>
-    <div id="mealAnalyseBtn">
-      <button class="btn btn-primary btn-full" onclick="analyseMeal()" id="analyseBtn">Analyse with AI</button>
+    <div id="logAnalyseBtn">
+      <button class="btn btn-primary btn-full" onclick="analyseLog()" id="analyseBtn">Analyse with AI</button>
     </div>
   </div>
 </div>
 
-<!-- ── ACTIVITY MODAL ── -->
+<!-- ACTIVITY MODAL -->
 <div class="backdrop" id="actModal" style="display:none">
   <div class="modal">
-    <div class="modal-hdr">
-      <div class="modal-title">Log Activity</div>
-      <button class="modal-close" onclick="closeModal('actModal')">×</button>
-    </div>
+    <div class="modal-hdr"><div class="modal-title">Log Activity</div><button class="modal-close" onclick="closeModal('actModal')">×</button></div>
     <div class="quick-grid" id="quickActs"></div>
-    <div class="mb12">
-      <label class="label">Activity name</label>
-      <input class="input" id="actName" placeholder="e.g. Morning run">
-    </div>
+    <div class="mb12"><label class="label">Activity name</label><input class="input" id="actName" placeholder="e.g. Morning run"></div>
     <div class="row mb12">
-      <div class="f1">
-        <label class="label">Duration (min)</label>
-        <input class="input" id="actDur" type="number" placeholder="30" oninput="autoCalcCal()">
-      </div>
-      <div class="f1">
-        <label class="label">Distance (km)</label>
-        <input class="input" id="actDist" type="number" placeholder="optional" step="0.1">
-      </div>
+      <div class="f1"><label class="label">Duration (min)</label><input class="input" id="actDur" type="number" placeholder="30" oninput="autoCalcCal()"></div>
+      <div class="f1"><label class="label">Distance (km)</label><input class="input" id="actDist" type="number" placeholder="optional" step="0.1"></div>
     </div>
-    <div class="mb12">
-      <label class="label">Calories burned <span class="xs c-subtle">(auto-calculated or override)</span></label>
-      <input class="input" id="actCal" type="number" placeholder="auto">
-    </div>
+    <div class="mb12"><label class="label">Calories burned <span class="xs c-subtle">(auto or override)</span></label><input class="input" id="actCal" type="number" placeholder="auto"></div>
     <div id="actErr" class="err" style="display:none"></div>
     <button class="btn btn-primary btn-full" onclick="confirmAct()">Add Activity</button>
   </div>
 </div>
 
-<!-- ── WEIGHT MODAL ── -->
+<!-- WEIGHT MODAL -->
 <div class="backdrop" id="weightModal" style="display:none">
   <div class="modal">
-    <div class="modal-hdr">
-      <div class="modal-title">Log Weight</div>
-      <button class="modal-close" onclick="closeModal('weightModal')">×</button>
-    </div>
-    <div class="mb12">
-      <label class="label">Your weight today (kg)</label>
-      <input class="input" id="weightIn" type="number" step="0.05" placeholder="77.5">
-    </div>
+    <div class="modal-hdr"><div class="modal-title">Log Weight & Measurements</div><button class="modal-close" onclick="closeModal('weightModal')">×</button></div>
+    <div class="mb12"><label class="label">Weight (kg)</label><input class="input" id="weightIn" type="number" step="0.05" placeholder="77.5"></div>
+    <div class="mb12"><label class="label">Waist circumference (cm) <span class="xs c-subtle">optional — monthly</span></label><input class="input" id="waistIn" type="number" step="0.5" placeholder="e.g. 88"></div>
+    <div class="mb12"><label class="label">Resting heart rate (bpm) <span class="xs c-subtle">optional</span></label><input class="input" id="rhrIn" type="number" placeholder="e.g. 58"></div>
     <button class="btn btn-primary btn-full" onclick="confirmWeight()">Save</button>
   </div>
 </div>
 
-<!-- ── MODE MODAL ── -->
+<!-- MODE MODAL -->
 <div class="backdrop" id="modeModal" style="display:none">
   <div class="modal">
-    <div class="modal-hdr">
-      <div class="modal-title">Goal Mode</div>
-      <button class="modal-close" onclick="closeModal('modeModal')">×</button>
-    </div>
-    <div class="xs c-subtle mb12">Your goal shapes AI suggestions, macro targets and activity recommendations. You can change this anytime.</div>
+    <div class="modal-hdr"><div class="modal-title">Goal Mode</div><button class="modal-close" onclick="closeModal('modeModal')">×</button></div>
+    <div class="xs c-subtle mb12">Your goal shapes AI suggestions and macro targets. Change anytime.</div>
     <div class="mode-grid" id="modeGrid"></div>
     <button class="btn btn-primary btn-full mt12" onclick="closeModal('modeModal')">Done</button>
   </div>
 </div>
 
 <script>
-// ─── Config ───────────────────────────────────────────────────────────────────
-
-const SK = "nutrilens_v5";
-
+// ── Config ────────────────────────────────────────────────────────────────────
+const SK = "nutrilens_v7";
 const PROFILE = {
-  name:"Alex", height:173, weight:77.55, age:33, sex:"male",
-  targetWeight:70, location:"Cyprus", climate:"hot_mediterranean",
-  workStart:"08:00", workEnd:"14:00",
-  trainWindows:["06:00-08:00","14:30-19:00"],
-  eatTimes:["11:00","14:30","17:00"],
-  context:"Works 8am-2pm. Hot Mediterranean climate. Two young children. Family meals — no ingredient weighing. Runs 30km/week, walks 25km/week. No gym currently but has access."
+  height:173, weight:77.55, age:33, sex:"male", targetWeight:70,
+  location:"Cyprus", climate:"hot_mediterranean",
+  context:"Works 8am-2pm Cyprus. Hot climate. Two young children. Family meals, no ingredient weighing. Runs ~30km/week, walks ~25km/week. Mediterranean/Cypriot diet."
 };
-
 const MODES = [
-  {id:"fat_loss",     emoji:"🔥", name:"Fat Loss",     desc:"500 kcal deficit, high protein", macros:{protein:160,carbs:180,fat:65},  color:"#f97316"},
-  {id:"testosterone", emoji:"💪", name:"Testosterone",  desc:"Zinc, D, healthy fats, sleep",   macros:{protein:150,carbs:200,fat:80},  color:"#a78bfa"},
-  {id:"abs",          emoji:"🎯", name:"Core & Abs",    desc:"Deficit + core focus",            macros:{protein:165,carbs:160,fat:60},  color:"#38bdf8"},
-  {id:"energy",       emoji:"⚡", name:"Energy",        desc:"Carb timing, sleep, HRV",         macros:{protein:140,carbs:220,fat:70},  color:"#fbbf24"},
-  {id:"endurance",    emoji:"🏃", name:"Endurance",     desc:"Carb fuelling, recovery",         macros:{protein:145,carbs:240,fat:65},  color:"#22d3a0"},
-  {id:"maintain",     emoji:"⚖️", name:"Maintain",      desc:"TDEE balance",                    macros:{protein:140,carbs:200,fat:70},  color:"#6b84a8"},
+  {id:"fat_loss",    emoji:"🔥",name:"Fat Loss",    desc:"500 kcal deficit, high protein",  macros:{protein:160,carbs:180,fat:65}},
+  {id:"testosterone",emoji:"💪",name:"Testosterone",desc:"Zinc, D3, healthy fats, sleep",   macros:{protein:150,carbs:200,fat:80}},
+  {id:"abs",         emoji:"🎯",name:"Core & Abs",  desc:"Deficit + core focus",             macros:{protein:165,carbs:160,fat:60}},
+  {id:"energy",      emoji:"⚡",name:"Energy",      desc:"Carb timing, sleep, hydration",    macros:{protein:140,carbs:220,fat:70}},
+  {id:"endurance",   emoji:"🏃",name:"Endurance",   desc:"Carb fuelling, recovery",          macros:{protein:145,carbs:240,fat:65}},
+  {id:"maintain",    emoji:"⚖️",name:"Maintain",    desc:"TDEE balance",                     macros:{protein:140,carbs:200,fat:70}},
 ];
-
 const QUICK_ACTS = [
-  {emoji:"🏃",name:"Run",     met:9.8 },
-  {emoji:"🚶",name:"Walk",    met:3.5 },
-  {emoji:"🚴",name:"Cycle",   met:7.5 },
-  {emoji:"🏊",name:"Swim",    met:8.0 },
-  {emoji:"🏋️",name:"Weights", met:5.0 },
-  {emoji:"🧘",name:"Yoga",    met:2.5 },
+  {emoji:"🏃",name:"Run",met:9.8},{emoji:"🚶",name:"Walk",met:3.5},{emoji:"🚴",name:"Cycle",met:7.5},
+  {emoji:"🏊",name:"Swim",met:8.0},{emoji:"🏋️",name:"Weights",met:5.0},{emoji:"🧘",name:"Yoga",met:2.5},
 ];
+// Hydration effectiveness (% of volume that counts as hydration)
+const HYDRO_FACTOR = {water:1.0,juice:0.85,other:0.9,coffee:0.6,alcohol:0.0,food:0.0};
+// Daily targets
+const HYDRO_TARGET_ML = 2500; // ml — higher in Cyprus heat
+const CAFFEINE_LIMIT = 200;   // mg — cut after 2pm
 
-// ─── State ────────────────────────────────────────────────────────────────────
-let db = (() => {
-  try { const r=localStorage.getItem(SK); return r?JSON.parse(r):freshDB(); }
-  catch { return freshDB(); }
-})();
-
+// ── DB ────────────────────────────────────────────────────────────────────────
+let db = (() => { try { const r=localStorage.getItem(SK); return r?JSON.parse(r):freshDB(); } catch{return freshDB();} })();
 function freshDB() {
   return {
     profile:{...PROFILE}, mode:"fat_loss",
-    meals:{}, activities:{}, weights:{},
-    checkins:{}, // {date:{sleep_hrs,sleep_q,energy,water}}
-    insight:null, insightDate:null
+    logs:{},        // {date: [{id,time,type,name,calories,protein,carbs,fat,ml,hydro_ml,caffeine_mg,micros,notes,confidence,preview}]}
+    activities:{}, weights:{},
+    // weights entries: {date: {kg, waist_cm, rhr_bpm}}
+    checkins:{},   // {date: {sleep_hrs,sleep_q,energy,water(legacy)}}
+    stravaCache:{},
+    insight:null, insightDate:null,
+    microAlerts:null, microAlertsDate:null
   };
 }
-function save() { localStorage.setItem(SK, JSON.stringify(db)); }
+function save() { localStorage.setItem(SK,JSON.stringify(db)); }
 function today() { return new Date().toISOString().slice(0,10); }
 function fmtDate(d) { return new Date(d).toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"}); }
 
-// ─── Calculations ─────────────────────────────────────────────────────────────
-function bmr() {
-  const p=db.profile;
-  return Math.round(10*p.weight + 6.25*p.height - 5*p.age + 5);
-}
-function actBurn(date) {
-  return (db.activities[date]||[]).reduce((s,a)=>s+(a.calories||0),0);
-}
-function tdee(date) { return bmr() + actBurn(date||today()); }
-function target(date) {
-  const mode = MODES.find(m=>m.id===db.mode)||MODES[0];
-  const deficit = mode.id==="maintain"?0:500;
-  return tdee(date) - deficit;
-}
-function eaten(date) { return (db.meals[date||today()]||[]).reduce((s,m)=>s+(m.calories||0),0); }
-function macroTotal(date, key) { return (db.meals[date||today()]||[]).reduce((s,m)=>s+(m[key]||0),0); }
-function bmi() {
-  const p=db.profile; return (p.weight/((p.height/100)**2)).toFixed(1);
-}
+// ── Maths ─────────────────────────────────────────────────────────────────────
+function bmr() { const p=db.profile; return Math.round(10*p.weight+6.25*p.height-5*p.age+5); }
+function actBurn(d) { return [...(db.activities[d]||[]),...(db.stravaCache[d]||[])].reduce((s,a)=>s+(a.calories||0),0); }
+function tdee(d) { return bmr()+actBurn(d||today()); }
+function target(d) { return tdee(d)-(db.mode==="maintain"?0:500); }
+function dayLogs(d) { return db.logs[d||today()]||[]; }
+function eaten(d) { return dayLogs(d).filter(l=>l.type==="food").reduce((s,l)=>s+(l.calories||0),0)
+  + dayLogs(d).filter(l=>l.type!=="food").reduce((s,l)=>s+(l.calories||0),0); }
+function foodCals(d) { return dayLogs(d).filter(l=>l.type==="food").reduce((s,l)=>s+(l.calories||0),0); }
+function drinkCals(d) { return dayLogs(d).filter(l=>l.type!=="food").reduce((s,l)=>s+(l.calories||0),0); }
+function totalHydro(d) { return dayLogs(d).reduce((s,l)=>s+(l.hydro_ml||0),0); }
+function totalCaffeine(d) { return dayLogs(d).reduce((s,l)=>s+(l.caffeine_mg||0),0); }
+function macroSum(d,k) { return dayLogs(d).filter(l=>l.type==="food").reduce((s,l)=>s+(l[k]||0),0); }
+function bmi() { const p=db.profile; return (p.weight/((p.height/100)**2)).toFixed(1); }
 function bmiCat(b) {
   if(b<18.5) return{l:"Underweight",c:"var(--blue)"};
-  if(b<25)   return{l:"Healthy",    c:"var(--green)"};
-  if(b<30)   return{l:"Overweight", c:"var(--yellow)"};
-  return            {l:"Obese",     c:"var(--red)"};
+  if(b<25)   return{l:"Healthy",c:"var(--green)"};
+  if(b<30)   return{l:"Overweight",c:"var(--yellow)"};
+  return{l:"Obese",c:"var(--red)"};
 }
 function metCal(met,min,kg) { return Math.round((met*kg*3.5/200)*min); }
-function latestWeight() {
-  const entries=Object.entries(db.weights).sort(([a],[b])=>b.localeCompare(a));
-  return entries.length>0?entries[0][1]:db.profile.weight;
+function latestW() {
+  const e=Object.entries(db.weights).sort(([a],[b])=>b.localeCompare(a));
+  return e.length?(e[0][1].kg||e[0][1]):db.profile.weight;
 }
 function currentMode() { return MODES.find(m=>m.id===db.mode)||MODES[0]; }
-function macroTargets() { return currentMode().macros; }
 
-// ─── Tab ──────────────────────────────────────────────────────────────────────
-let currentTab = "today";
-let pendingPhoto = null, pendingMeal = null, selectedActMET = null, selectedActEmoji = "💪";
+// ── Tab ───────────────────────────────────────────────────────────────────────
+let currentTab="today", pendingPhoto=null, pendingLog=null, logType="food", selEmoji="💪", selMET=5;
 
 function switchTab(tab) {
   currentTab=tab;
@@ -415,37 +353,31 @@ function switchTab(tab) {
   render();
 }
 
-// ─── Render ───────────────────────────────────────────────────────────────────
+// ── Render ────────────────────────────────────────────────────────────────────
 function render() {
-  const t=today(), mode=currentMode();
+  const mode=currentMode();
   document.getElementById("modeEmoji").textContent=mode.emoji;
   document.getElementById("modeName").textContent=mode.name;
-
   const el=document.getElementById("content");
-  if(currentTab==="today")      el.innerHTML=renderToday();
-  if(currentTab==="activity")   el.innerHTML=renderActivity();
-  if(currentTab==="nutrition")  el.innerHTML=renderNutrition();
-  if(currentTab==="body")       el.innerHTML=renderBody();
-  if(currentTab==="history")    el.innerHTML=renderHistory();
-  attachListeners();
+  if(currentTab==="today")     el.innerHTML=renderToday();
+  if(currentTab==="activity")  el.innerHTML=renderActivity();
+  if(currentTab==="nutrition") el.innerHTML=renderNutrition();
+  if(currentTab==="body")      el.innerHTML=renderBody();
+  if(currentTab==="history")   el.innerHTML=renderHistory();
+  document.querySelectorAll(".backdrop").forEach(b=>{b.onclick=e=>{if(e.target===b)b.style.display="none";};});
 }
 
-// ─── TODAY ────────────────────────────────────────────────────────────────────
+// ── TODAY ─────────────────────────────────────────────────────────────────────
 function renderToday() {
-  const t=today();
-  const ci=db.checkins[t]||{};
-  const checkedIn=ci.energy!==undefined;
-  const meals=db.meals[t]||[];
+  const t=today(), ci=db.checkins[t]||{}, checkedIn=ci.energy!==undefined;
+  const mt=currentMode().macros;
   const tgt=target(t), eat=eaten(t), burn=actBurn(t);
   const bal=eat-tgt, deficit=bal<=0;
-  const pct=Math.min(eat/Math.max(tgt,1),1);
-  const r=52, circ=2*Math.PI*r, dash=pct*circ;
-  const ringCol=deficit?"var(--purple)":"var(--red)";
-  const mode=currentMode();
-  const mt=macroTargets();
-  const protein=macroTotal(t,"protein"), carbs=macroTotal(t,"carbs"), fat=macroTotal(t,"fat");
-  const water=ci.water||0;
-
+  const pct=Math.min(eat/Math.max(tgt,1),1), r=52, circ=2*Math.PI*r, dash=pct*circ;
+  const protein=macroSum(t,"protein"), carbs=macroSum(t,"carbs"), fat=macroSum(t,"fat");
+  const hydro=totalHydro(t), hydroPct=Math.min(hydro/HYDRO_TARGET_ML*100,100);
+  const caffeine=totalCaffeine(t);
+  const logs=dayLogs(t);
   let html="";
 
   // Morning check-in
@@ -453,25 +385,18 @@ function renderToday() {
     html+=`<div class="checkin">
       <div class="checkin-title">☀️ Morning check-in</div>
       <div class="tap-label">Hours slept</div>
-      <div class="tap-row" id="sleepRow">
-        ${[5,6,7,8,9].map(n=>`<button class="tap-item" onclick="setSleep(${n})" id="sl_${n}"><div class="tap-item-num">${n}</div><div class="tap-item-label">hrs</div></button>`).join("")}
-      </div>
+      <div class="tap-row">${[5,6,7,8,9].map(n=>`<button class="tap-item" onclick="setSleep(${n})" id="sl_${n}"><div class="tap-item-num">${n}</div><div class="tap-item-label">hrs</div></button>`).join("")}</div>
       <div class="tap-label mt8">Sleep quality</div>
-      <div class="tap-row" id="sqRow">
-        ${["😴","😐","🙂","😊","🌟"].map((e,i)=>`<button class="tap-item" onclick="setSleepQ(${i+1})" id="sq_${i+1}"><div class="tap-item-num">${e}</div><div class="tap-item-label">${i+1}/5</div></button>`).join("")}
-      </div>
+      <div class="tap-row">${["😴","😐","🙂","😊","🌟"].map((e,i)=>`<button class="tap-item" onclick="setSleepQ(${i+1})" id="sq_${i+1}"><div class="tap-item-num">${e}</div><div class="tap-item-label">${i+1}/5</div></button>`).join("")}</div>
       <div class="tap-label mt8">Energy today</div>
-      <div class="tap-row" id="energyRow">
-        ${["🪫","😐","🙂","💪","⚡"].map((e,i)=>`<button class="tap-item" onclick="setEnergy(${i+1})" id="en_${i+1}"><div class="tap-item-num">${e}</div><div class="tap-item-label">${i+1}/5</div></button>`).join("")}
-      </div>
+      <div class="tap-row">${["🪫","😐","🙂","💪","⚡"].map((e,i)=>`<button class="tap-item" onclick="setEnergy(${i+1})" id="en_${i+1}"><div class="tap-item-num">${e}</div><div class="tap-item-label">${i+1}/5</div></button>`).join("")}</div>
       <button class="btn btn-primary btn-full mt12" onclick="doneCheckin()">Done ✓</button>
     </div>`;
   } else {
-    // Quick stats strip from check-in
     html+=`<div style="display:flex;gap:8px;padding:12px 14px 0">
-      ${ci.sleep_hrs?`<div class="card-sm" style="flex:1;text-align:center"><div style="font-size:18px">😴</div><div class="xs c-subtle mt4">${ci.sleep_hrs}h sleep</div></div>`:""}
-      ${ci.sleep_q?`<div class="card-sm" style="flex:1;text-align:center"><div style="font-size:18px">${["😴","😐","🙂","😊","🌟"][ci.sleep_q-1]}</div><div class="xs c-subtle mt4">Quality ${ci.sleep_q}/5</div></div>`:""}
-      ${ci.energy?`<div class="card-sm" style="flex:1;text-align:center"><div style="font-size:18px">${["🪫","😐","🙂","💪","⚡"][ci.energy-1]}</div><div class="xs c-subtle mt4">Energy ${ci.energy}/5</div></div>`:""}
+      ${ci.sleep_hrs?`<div class="card-sm" style="flex:1;text-align:center"><div style="font-size:18px">😴</div><div class="xs c-subtle mt4">${ci.sleep_hrs}h</div></div>`:""}
+      ${ci.sleep_q?`<div class="card-sm" style="flex:1;text-align:center"><div style="font-size:18px">${["😴","😐","🙂","😊","🌟"][ci.sleep_q-1]}</div><div class="xs c-subtle mt4">Quality</div></div>`:""}
+      ${ci.energy?`<div class="card-sm" style="flex:1;text-align:center"><div style="font-size:18px">${["🪫","😐","🙂","💪","⚡"][ci.energy-1]}</div><div class="xs c-subtle mt4">Energy</div></div>`:""}
     </div>`;
   }
 
@@ -482,24 +407,15 @@ function renderToday() {
       <div class="ring-wrap">
         <svg width="128" height="128" viewBox="0 0 128 128">
           <circle cx="64" cy="64" r="${r}" fill="none" stroke="var(--border)" stroke-width="10"/>
-          <circle cx="64" cy="64" r="${r}" fill="none" stroke="${ringCol}" stroke-width="10"
+          <circle cx="64" cy="64" r="${r}" fill="none" stroke="${deficit?"var(--purple)":"var(--red)"}" stroke-width="10"
             stroke-dasharray="${dash.toFixed(1)} ${circ.toFixed(1)}" stroke-linecap="round"/>
         </svg>
-        <div class="ring-center">
-          <div class="ring-num">${eat}</div>
-          <div class="ring-sub">/ ${tgt} kcal</div>
-        </div>
+        <div class="ring-center"><div class="ring-num">${eat}</div><div class="ring-sub">/ ${tgt} kcal</div></div>
       </div>
       <div class="f1">
-        <div class="balance-big" style="color:${deficit?"var(--green)":"var(--red)"}">
-          ${deficit?"−":"+"}${Math.abs(bal)} kcal
-        </div>
-        <div class="balance-label">${deficit?"In deficit 🎯":"In surplus — log activity to close the gap"}</div>
-        <div class="stats-mini">
-          BMR <span>${bmr()}</span> kcal<br>
-          🏃 <span>${burn}</span> activity burned<br>
-          🎯 <span>${tgt}</span> target · <span style="color:${mode.color}">${mode.emoji} ${mode.name}</span>
-        </div>
+        <div class="balance-big" style="color:${deficit?"var(--green)":"var(--red)"}">${deficit?"−":"+"}${Math.abs(bal)} kcal</div>
+        <div class="balance-label">${deficit?"In deficit 🎯":"In surplus"}</div>
+        <div class="stats-mini">BMR <span>${bmr()}</span> kcal<br>🏃 <span>${burn}</span> burned<br>🎯 Target <span>${tgt}</span> kcal</div>
       </div>
     </div>
     <div class="mt16">
@@ -509,26 +425,37 @@ function renderToday() {
     </div>
   </div>`;
 
-  // Water tracker
+  // Hydration card
+  const hydroColor = hydro>=HYDRO_TARGET_ML?"var(--green)":hydro>=HYDRO_TARGET_ML*0.6?"var(--blue)":"var(--red)";
+  const caffeineColor = caffeine>CAFFEINE_LIMIT?"var(--red)":caffeine>150?"var(--yellow)":"var(--green)";
   html+=`<div class="card">
-    <div class="row mb8">
-      <div class="card-title f1" style="margin:0">Hydration</div>
-      <div class="xs c-subtle">${water}/8 glasses</div>
+    <div class="card-title">Hydration & Drinks</div>
+    <div class="row mb8" style="justify-content:space-between">
+      <div>
+        <div style="font-size:22px;font-weight:700;color:${hydroColor}">${hydro}ml</div>
+        <div class="xs c-subtle">of ${HYDRO_TARGET_ML}ml target</div>
+      </div>
+      <div class="tr">
+        <div style="font-size:16px;font-weight:700;color:${caffeineColor}">${caffeine}mg</div>
+        <div class="xs c-subtle">caffeine</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="openLogModal('water')">+ Drink</button>
     </div>
-    <div class="water-row">
-      ${Array.from({length:8},(_,i)=>`<span class="water-drop ${i<water?"":"empty"}" onclick="setWater(${i+1})">💧</span>`).join("")}
-      ${water>0?`<button class="btn btn-ghost btn-sm" onclick="setWater(${water-1})" style="font-size:11px">undo</button>`:""}
-    </div>
+    <div class="hydro-bar"><div class="hydro-fill" style="width:${hydroPct.toFixed(1)}%"></div></div>
+    ${caffeine>CAFFEINE_LIMIT?`<div class="xs c-red mt4">⚠ Over caffeine limit — avoid coffee after 2pm</div>`:""}
+    ${hydro<800&&logs.length>2?`<div class="xs c-blue mt4">💧 Drink more — especially important in Cyprus heat</div>`:""}
   </div>`;
 
   // Insight
   if(db.insight && db.insightDate===today()) {
-    html+=`<div class="card card-accent">
-      <div class="insight">
-        <div class="insight-label">Today's Insight</div>
-        <div class="insight-icon">💡</div>
-        <div class="insight-text">${db.insight}</div>
-      </div>
+    html+=`<div class="card"><div class="insight"><div class="insight-label">Today's Insight</div><div style="font-size:20px;margin-bottom:6px">💡</div><div class="insight-text">${db.insight}</div></div></div>`;
+  }
+
+  // Micro alert
+  if(db.microAlerts && db.microAlertsDate===today()) {
+    html+=`<div class="card" style="border-color:rgba(251,191,36,.3)">
+      <div class="card-title">🔬 Micronutrient alert</div>
+      <div class="xs" style="color:var(--text);line-height:1.7">${db.microAlerts}</div>
     </div>`;
   }
 
@@ -537,176 +464,163 @@ function renderToday() {
     <div class="xs c-subtle bold" style="letter-spacing:.06em;text-transform:uppercase">Quick log</div>
   </div>
   <div class="quick-strip">
-    <div class="quick-card" onclick="openModal('mealModal')"><span class="quick-card-icon">🍽</span><span class="quick-card-label">Meal</span></div>
+    <div class="quick-card" onclick="openLogModal('food')"><span class="quick-card-icon">🍽</span><span class="quick-card-label">Food</span></div>
+    <div class="quick-card" onclick="openLogModal('water')"><span class="quick-card-icon">💧</span><span class="quick-card-label">Drink</span></div>
     <div class="quick-card" onclick="openModal('actModal')"><span class="quick-card-icon">🏃</span><span class="quick-card-label">Activity</span></div>
     <div class="quick-card" onclick="openModal('weightModal')"><span class="quick-card-icon">⚖️</span><span class="quick-card-label">Weight</span></div>
     <div class="quick-card" onclick="getInsight()"><span class="quick-card-icon">🧠</span><span class="quick-card-label">AI Insight</span></div>
+    <div class="quick-card" onclick="getMicroAlert()"><span class="quick-card-icon">🔬</span><span class="quick-card-label">Micros</span></div>
   </div>`;
 
-  // Meals
+  // Today's log (food + drinks together)
   html+=`<div class="card">
     <div class="row mb12">
-      <div class="card-title f1" style="margin:0">Meals</div>
-      <button class="btn btn-primary btn-sm" onclick="openModal('mealModal')">+ Add</button>
+      <div class="card-title f1" style="margin:0">Today's log</div>
+      <button class="btn btn-primary btn-sm" onclick="openLogModal('food')">+ Add</button>
     </div>`;
-  if(meals.length===0) {
-    html+=`<div style="text-align:center;color:var(--muted);font-size:13px;padding:16px 0">No meals logged yet — tap + Add or use quick log</div>`;
-  } else {
-    meals.forEach(m=>{
-      const cc={high:"var(--green)",medium:"var(--yellow)",low:"var(--red)"}[m.confidence]||"var(--subtle)";
-      html+=`<div class="meal-item">
-        ${m.preview?`<img class="meal-thumb" src="${m.preview}">`:`<div class="meal-icon">${mealEmoji(m.name)}</div>`}
+  if(logs.length===0) html+=`<div class="empty">Nothing logged yet — tap + Add or use quick log above</div>`;
+  else {
+    logs.forEach(l=>{
+      const cc={high:"var(--green)",medium:"var(--yellow)",low:"var(--red)"}[l.confidence]||"var(--subtle)";
+      const isDrink=l.type!=="food";
+      html+=`<div class="log-item">
+        ${l.preview?`<img class="log-thumb" src="${l.preview}">`:`<div class="log-icon">${isDrink?drinkEmoji(l.type):mealEmoji(l.name)}</div>`}
         <div class="f1">
-          <div class="row">
-            <div class="meal-name f1">${m.name}</div>
-            <button class="del-btn" onclick="delMeal('${m.id}')">×</button>
-          </div>
-          <div class="meal-meta">${m.time} · ${m.calories} kcal · P:${m.protein}g C:${m.carbs}g F:${m.fat}g</div>
-          ${m.confidence?`<span class="badge xs" style="background:${cc}22;color:${cc}">${m.confidence}</span>`:""}
-          ${m.notes?`<div class="xs c-subtle mt4">💡 ${m.notes}</div>`:""}
+          <div class="row"><div class="log-name f1">${l.name}</div><button class="del-btn" onclick="delLog('${l.id}')">×</button></div>
+          <div class="log-meta">${l.time} · ${isDrink?`${l.ml||"?"}ml · ${l.hydro_ml||0}ml hydration · ${l.caffeine_mg||0}mg caff`:`${l.calories} kcal · P:${l.protein}g C:${l.carbs}g F:${l.fat}g`}</div>
+          ${l.confidence?`<span class="badge xs" style="background:${cc}22;color:${cc}">${l.confidence}</span>`:""}
+          ${l.notes?`<div class="xs c-subtle mt4">💡 ${l.notes}</div>`:""}
         </div>
       </div>`;
     });
   }
   html+=`</div>`;
-
   return html;
 }
 
-// ─── ACTIVITY ─────────────────────────────────────────────────────────────────
+// ── ACTIVITY ──────────────────────────────────────────────────────────────────
 function renderActivity() {
-  const t=today(), acts=db.activities[t]||[], burn=actBurn(t);
+  const t=today();
+  const manual=db.activities[t]||[], strava=db.stravaCache[t]||[];
+  const allActs=[...strava.map(a=>({...a,fromStrava:true})),...manual];
+  const burn=actBurn(t);
   const weekDates=[...Array(7)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()-i);return d.toISOString().slice(0,10);});
   const weekBurn=weekDates.reduce((s,d)=>s+actBurn(d),0);
-  const weekDist=weekDates.reduce((s,d)=>s+(db.activities[d]||[]).reduce((s2,a)=>s2+(a.distance||0),0),0);
+  const weekDist=weekDates.reduce((s,d)=>s+[...(db.activities[d]||[]),(db.stravaCache[d]||[])].reduce((s2,a)=>s2+(a.distance_m?a.distance_m/1000:a.distance||0),0),0);
 
   let html=`<div class="card">
     <div class="row mb12">
       <div class="card-title f1" style="margin:0">Today</div>
       <button class="btn btn-primary btn-sm" onclick="openModal('actModal')">+ Add</button>
     </div>`;
-
-  if(acts.length===0) {
-    html+=`<div style="text-align:center;color:var(--muted);font-size:13px;padding:16px 0">No activities logged yet today</div>`;
-  } else {
-    acts.forEach(a=>{
+  if(allActs.length===0) html+=`<div class="empty">No activities yet today</div>`;
+  else {
+    allActs.forEach(a=>{
+      const dist=a.distance_m?`${(a.distance_m/1000).toFixed(1)}km`:a.distance?`${a.distance}km`:"";
+      const dur=a.moving_time_s?`${Math.round(a.moving_time_s/60)}min`:a.duration?`${a.duration}min`:"";
       html+=`<div class="act-item">
-        <div class="act-emoji">${a.emoji||"💪"}</div>
-        <div class="f1">
-          <div class="sm bold c-bright">${a.name}</div>
-          <div class="xs c-subtle">${a.duration}min${a.distance?" · "+a.distance+"km":""}</div>
-        </div>
-        <div class="tr">
-          <div class="act-cal">${a.calories}</div>
-          <div class="xs c-subtle">kcal</div>
-        </div>
-        <button class="del-btn" onclick="delAct('${a.id}')">×</button>
+        <div class="act-emoji">${a.fromStrava?sportEmoji(a.sport_type):(a.emoji||"💪")}</div>
+        <div class="f1"><div class="sm bold c-bright">${a.name}</div><div class="xs c-subtle">${[dur,dist].filter(Boolean).join(" · ")}</div></div>
+        <div class="tr"><div class="act-cal">${a.calories||"—"}</div><div class="xs c-subtle">kcal</div></div>
+        ${!a.fromStrava?`<button class="del-btn" onclick="delAct('${a.id}')">×</button>`:""}
       </div>`;
     });
-    html+=`<div class="div"></div>
-      <div class="row"><div class="f1 sm c-sec">Total burned</div><div class="bold c-orange">${burn} kcal</div></div>`;
+    html+=`<div class="div"></div><div class="row"><div class="f1 sm c-sec">Total burned</div><div class="bold c-orange">${burn} kcal</div></div>`;
   }
   html+=`</div>`;
 
-  // Weekly stats
   html+=`<div class="card">
     <div class="card-title">This week</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
       <div class="card-sm tc"><div class="bold" style="font-size:20px;color:var(--orange)">${weekBurn}</div><div class="xs c-subtle mt4">kcal burned</div></div>
       <div class="card-sm tc"><div class="bold" style="font-size:20px;color:var(--teal)">${weekDist.toFixed(0)}</div><div class="xs c-subtle mt4">km moved</div></div>
-      <div class="card-sm tc"><div class="bold" style="font-size:20px;color:var(--purple2)">${weekDates.filter(d=>(db.activities[d]||[]).length>0).length}</div><div class="xs c-subtle mt4">active days</div></div>
-    </div>`;
-
-  // Activity bar chart
-  const dayBurns=weekDates.map(d=>actBurn(d)).reverse();
-  const maxBurn=Math.max(...dayBurns,1);
-  html+=`<div class="hbar-wrap">
-    ${dayBurns.map((b,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center">
-      <div class="hbar" style="height:${Math.max((b/maxBurn)*56,3)}px;background:${b>0?"var(--purple)":"var(--border)"}"></div>
-      <div class="hbar-label">${new Date(weekDates[6-i]).toLocaleDateString("en-GB",{weekday:"narrow"})}</div>
-    </div>`).join("")}
+      <div class="card-sm tc"><div class="bold" style="font-size:20px;color:var(--purple2)">${weekDates.filter(d=>actBurn(d)>0).length}</div><div class="xs c-subtle mt4">active days</div></div>
+    </div>
+    <div class="hbar-wrap">
+      ${[...weekDates].reverse().map(d=>{
+        const b=actBurn(d), maxB=Math.max(...weekDates.map(dd=>actBurn(dd)),1);
+        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center">
+          <div class="hbar" style="height:${Math.max((b/maxB)*56,3)}px;background:${b>0?"var(--purple)":"var(--border)"}"></div>
+          <div class="hbar-label">${new Date(d).toLocaleDateString("en-GB",{weekday:"narrow"})}</div>
+        </div>`;
+      }).join("")}
+    </div>
   </div>`;
-
-  // Day by day
-  weekDates.forEach(d=>{
-    const dayActs=db.activities[d]||[];
-    if(dayActs.length===0) return;
-    const b=actBurn(d), types=[...new Set(dayActs.map(a=>a.emoji))].join("");
-    html+=`<div class="act-item">
-      <div class="act-emoji">${types||"💪"}</div>
-      <div class="f1">
-        <div class="sm bold">${fmtDate(d)}${d===today()?" <span class='xs c-subtle'>(today)</span>":""}</div>
-        <div class="xs c-subtle">${dayActs.length} activit${dayActs.length===1?"y":"ies"} · ${dayActs.map(a=>a.name).join(", ")}</div>
-      </div>
-      <div class="bold c-orange">${b} kcal</div>
-    </div>`;
-  });
-  html+=`</div>`;
   return html;
 }
 
-// ─── NUTRITION ────────────────────────────────────────────────────────────────
+// ── NUTRITION ─────────────────────────────────────────────────────────────────
 function renderNutrition() {
-  const t=today(), mt=macroTargets();
-  const p=macroTotal(t,"protein"), c=macroTotal(t,"carbs"), f=macroTotal(t,"fat");
-  const mode=currentMode();
-
-  // 7-day macro averages
+  const t=today(), mt=currentMode().macros, mode=currentMode();
+  const p=macroSum(t,"protein"), c=macroSum(t,"carbs"), f=macroSum(t,"fat");
+  const hydro=totalHydro(t), caff=totalCaffeine(t);
   const days7=[...Array(7)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()-i);return d.toISOString().slice(0,10);});
-  const avg=(key)=>Math.round(days7.reduce((s,d)=>{const ms=db.meals[d]||[];return s+ms.reduce((s2,m)=>s2+(m[key]||0),0);},0)/Math.max(days7.filter(d=>(db.meals[d]||[]).length>0).length,1));
-  const avgP=avg("protein"), avgC=avg("carbs"), avgF=avg("fat"), avgCal=avg("calories");
+  const avgDays=days7.filter(d=>dayLogs(d).length>0);
+  const avg=key=>avgDays.length?Math.round(avgDays.reduce((s,d)=>dayLogs(d).filter(l=>l.type==="food").reduce((s2,l)=>s2+(l[key]||0),s),0)/avgDays.length):0;
+  const avgHydro=avgDays.length?Math.round(avgDays.reduce((s,d)=>s+totalHydro(d),0)/avgDays.length):0;
+  const avgCaff=avgDays.length?Math.round(avgDays.reduce((s,d)=>s+totalCaffeine(d),0)/avgDays.length):0;
+
+  const tips={
+    fat_loss:["🥩 Hit 160g protein daily to preserve muscle during fat loss","🥗 Mediterranean salads + lean protein = high volume, low calorie","⏰ Your 11am–5pm eating window is ideal for fat loss","💧 2500ml+ daily — especially on run days in Cyprus heat"],
+    testosterone:["🥜 Pumpkin seeds and red meat for zinc","☀️ Cyprus sun = natural vitamin D — great for testosterone","🥑 Olive oil and avocados support healthy hormone levels","😴 Sleep quality is the single biggest testosterone lever"],
+    abs:["📉 Consistent deficit is the key — no shortcuts","🏋️ Add 2 core sessions per week alongside running","🥩 High protein protects muscle as you lean out","💧 Good hydration supports metabolism and recovery"],
+    energy:["🍌 Eat carbs before your training window","☕ Keep caffeine under 200mg and cut after 2pm","💧 Dehydration is a top cause of fatigue in hot climates","🛌 Sleep quality is the #1 predictor of tomorrow's energy"],
+    endurance:["🍝 Carb load the evening before long runs","🍌 Eat within 30 minutes of finishing a run","💧 Electrolytes matter in Cyprus heat on long runs","🥩 30-40g protein within 2hrs post-run for recovery"],
+    maintain:["⚖️ Match intake to your TDEE","📊 Weekly weigh-in catches drift early","🔄 Vary meals to cover all micronutrients","💧 Consistent hydration supports performance"],
+  };
 
   let html=`<div class="card">
     <div class="card-title">Today vs targets</div>
     ${mbar("Protein",p,mt.protein,"var(--purple2)")}
     ${mbar("Carbs",c,mt.carbs,"var(--teal)")}
     ${mbar("Fat",f,mt.fat,"var(--orange)")}
+    ${mbar("Hydration",hydro,HYDRO_TARGET_ML,"var(--blue)")}
     <div class="div"></div>
-    <div class="xs c-subtle">Targets set for <span style="color:${mode.color}">${mode.emoji} ${mode.name}</span> mode · tap mode pill to change</div>
+    <div class="row" style="justify-content:space-between;font-size:12px">
+      <span class="c-subtle">Caffeine today</span>
+      <span style="color:${caff>CAFFEINE_LIMIT?"var(--red)":"var(--green)"};font-weight:600">${caff}mg ${caff>CAFFEINE_LIMIT?"⚠ over limit":""}</span>
+    </div>
   </div>`;
 
   html+=`<div class="card">
     <div class="card-title">7-day averages</div>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
-      ${[["Calories",avgCal,"kcal","var(--purple)"],["Protein",avgP,"g","var(--purple2)"],["Carbs",avgC,"g","var(--teal)"],["Fat",avgF,"g","var(--orange)"]].map(([l,v,u,col])=>`
-        <div class="macro-cell"><div class="macro-num" style="color:${col}">${v}</div><div class="macro-lbl">${l} ${u}</div></div>
-      `).join("")}
+    <div class="macro-grid">
+      ${[["Calories",avg("calories"),"kcal","var(--purple)"],["Protein",avg("protein"),"g","var(--purple2)"],["Hydration",avgHydro,"ml","var(--blue)"],["Caffeine",avgCaff,"mg","var(--orange)"]].map(([l,v,u,col])=>`<div class="macro-cell"><div class="macro-num" style="color:${col}">${v}</div><div class="macro-lbl">${l} ${u}</div></div>`).join("")}
     </div>
   </div>`;
 
-  // Mode-specific tips
-  const tips = {
-    fat_loss:["🥩 Hit 160g protein to protect muscle while losing fat","🥗 Prioritise volume — salads, vegetables, lean protein","⏰ Your 11am–5pm eating window is ideal for fat loss","💧 Stay hydrated in the Cyprus heat — it helps hunger"],
-    testosterone:["🥜 Add pumpkin seeds or red meat for zinc","☀️ Cyprus sun = vitamin D — great for testosterone","🥑 Healthy fats from olive oil and avocado support hormones","😴 Sleep quality is the biggest testosterone lever — prioritise it"],
-    abs:["🎯 Abs are made in the kitchen — deficit is key","🏋️ Add 2 core sessions per week to your running","📉 Track body weight trend weekly, not daily","🥩 High protein protects muscle as you lean out"],
-    energy:["🍌 Eat carbs before your run window for fuel","☕ Caffeine window: before 2pm only to protect sleep","💧 Dehydration = fatigue — aim for 8 glasses in the heat","🛌 Track sleep quality — it's the #1 energy predictor"],
-    endurance:["🍝 Carb load the night before long runs","🍌 Eat within 30min of finishing a run","🥩 Recovery protein within 2hrs post-run","💧 Electrolytes matter in Cyprus heat on long runs"],
-    maintain:["⚖️ Match intake to your TDEE","📊 Weekly weigh-in to catch drift early","🔄 Vary your meals to cover all micronutrients","💪 Maintain muscle with consistent protein intake"],
-  };
-  const modeTips=(tips[db.mode]||tips.fat_loss);
   html+=`<div class="card">
-    <div class="card-title">${mode.emoji} ${mode.name} — nutrition tips</div>
-    ${modeTips.map(t=>`<div class="stat-row xs"><span>${t}</span></div>`).join("")}
+    <div class="row mb8">
+      <div class="card-title f1" style="margin:0">${mode.emoji} ${mode.name} — tips</div>
+    </div>
+    ${(tips[db.mode]||tips.fat_loss).map(t=>`<div class="stat-row xs"><span>${t}</span></div>`).join("")}
   </div>`;
 
   return html;
 }
 
-// ─── BODY ─────────────────────────────────────────────────────────────────────
+// ── BODY ──────────────────────────────────────────────────────────────────────
 function renderBody() {
-  const lw=latestWeight(), bmiVal=parseFloat(bmi()), cat=bmiCat(bmiVal);
-  const p=db.profile;
+  const lw=latestW(), bmiVal=parseFloat(bmi()), cat=bmiCat(bmiVal), p=db.profile;
   const progress=Math.max(0,Math.min(1,(p.weight-lw)/(p.weight-p.targetWeight)));
-  const weeksToGoal=Math.ceil((lw-p.targetWeight)/0.5);
+  const r=44, circ=2*Math.PI*r, dash=Math.min((bmiVal-15)/25,1)*circ;
   const todayW=db.weights[today()];
-  const r=44, circ=2*Math.PI*r, pct=Math.min((bmiVal-15)/25,1), dash=pct*circ;
 
-  // Sleep/energy 7-day
+  // Get latest measurements
+  const allMeas=Object.entries(db.weights).sort(([a],[b])=>b.localeCompare(a));
+  const latestMeas=allMeas.find(([,v])=>v.waist_cm)?.[1]||{};
+  const latestRHR=allMeas.find(([,v])=>v.rhr_bpm)?.[1]||{};
+  const rhrTrend=()=>{
+    const rhrs=allMeas.filter(([,v])=>v.rhr_bpm).slice(0,5).map(([,v])=>v.rhr_bpm);
+    if(rhrs.length<2) return "";
+    return rhrs[0]<rhrs[rhrs.length-1]?"↓ improving":"↑ rising";
+  };
+
   const days7=[...Array(7)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()-i);return d.toISOString().slice(0,10);});
-  const avgEnergy=(days7.map(d=>(db.checkins[d]||{}).energy).filter(Boolean));
-  const avgSleep=(days7.map(d=>(db.checkins[d]||{}).sleep_hrs).filter(Boolean));
-  const avgEnergyVal=avgEnergy.length?( avgEnergy.reduce((a,b)=>a+b,0)/avgEnergy.length).toFixed(1):"-";
-  const avgSleepVal=avgSleep.length?(avgSleep.reduce((a,b)=>a+b,0)/avgSleep.length).toFixed(1):"-";
+  const sleeps=days7.map(d=>(db.checkins[d]||{}).sleep_hrs).filter(Boolean);
+  const energies=days7.map(d=>(db.checkins[d]||{}).energy).filter(Boolean);
+  const avgSleep=sleeps.length?(sleeps.reduce((a,b)=>a+b,0)/sleeps.length).toFixed(1):"-";
+  const avgEnergy=energies.length?(energies.reduce((a,b)=>a+b,0)/energies.length).toFixed(1):"-";
 
   let html=`<div class="card">
     <div class="card-title">BMI</div>
@@ -717,138 +631,116 @@ function renderBody() {
           <circle cx="53" cy="53" r="${r}" fill="none" stroke="${cat.c}" stroke-width="9"
             stroke-dasharray="${dash.toFixed(1)} ${circ.toFixed(1)}" stroke-linecap="round"/>
         </svg>
-        <div class="ring-center">
-          <div style="font-size:20px;font-weight:700;color:${cat.c}">${bmiVal}</div>
-          <div class="xs c-subtle">BMI</div>
-        </div>
+        <div class="ring-center"><div style="font-size:20px;font-weight:700;color:${cat.c}">${bmiVal}</div><div class="xs c-subtle">BMI</div></div>
       </div>
       <div>
         <div style="font-size:20px;font-weight:700;color:${cat.c}">${cat.l}</div>
         <div class="xs c-subtle mt8">${lw} kg · ${p.height} cm</div>
-        <div class="xs c-subtle">Target: ${p.targetWeight} kg → BMI ~${(p.targetWeight/((p.height/100)**2)).toFixed(1)}</div>
+        <div class="xs c-subtle">Target ${p.targetWeight} kg → BMI ~${(p.targetWeight/((p.height/100)**2)).toFixed(1)}</div>
       </div>
     </div>
   </div>`;
 
   html+=`<div class="card">
-    <div class="card-title">Goal Progress — Fat Loss</div>
-    <div class="row mb8 xs c-sec">
-      <div class="f1">Start ${p.weight} kg</div><div>Goal ${p.targetWeight} kg</div>
-    </div>
+    <div class="card-title">Goal Progress</div>
+    <div class="row mb8 xs c-sec"><div class="f1">Start ${p.weight} kg</div><div>Goal ${p.targetWeight} kg</div></div>
     <div class="prog-track"><div class="prog-fill" style="width:${(progress*100).toFixed(1)}%"></div></div>
-    <div class="xs c-subtle mt8">
-      ${lw>p.targetWeight
-        ?`${(lw-p.targetWeight).toFixed(1)} kg remaining · ~${weeksToGoal} weeks at consistent 500 kcal deficit`
-        :"🎉 Goal reached!"}
-    </div>
+    <div class="xs c-subtle mt8">${lw>p.targetWeight?`${(lw-p.targetWeight).toFixed(1)} kg remaining · ~${Math.ceil((lw-p.targetWeight)/0.5)} weeks at 500 kcal deficit`:"🎉 Goal reached!"}</div>
   </div>`;
 
-  // Wellness summary
+  // Measurements
+  html+=`<div class="card">
+    <div class="card-title">Measurements</div>
+    <div class="meas-grid mb12">
+      <div class="card-sm tc"><div class="bold" style="font-size:20px;color:var(--purple2)">${lw} kg</div><div class="xs c-subtle mt4">weight</div></div>
+      <div class="card-sm tc"><div class="bold" style="font-size:20px;color:var(--teal)">${latestMeas.waist_cm||"—"} cm</div><div class="xs c-subtle mt4">waist</div></div>
+      <div class="card-sm tc"><div class="bold" style="font-size:20px;color:var(--orange)">${latestRHR.rhr_bpm||"—"} bpm</div><div class="xs c-subtle mt4">resting HR ${rhrTrend()}</div></div>
+      <div class="card-sm tc"><div class="bold" style="font-size:20px;color:var(--blue)">${bmiVal}</div><div class="xs c-subtle mt4">BMI</div></div>
+    </div>
+    ${latestMeas.waist_cm?`<div class="xs c-subtle">💡 Waist under 94cm = low risk. Yours: ${latestMeas.waist_cm}cm ${latestMeas.waist_cm<94?"✓ good":"— aim to reduce"}</div>`:`<div class="xs c-subtle">Log waist monthly — best indicator of fat loss progress beyond the scale</div>`}
+  </div>`;
+
   html+=`<div class="card">
     <div class="card-title">Wellness (7-day avg)</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div class="card-sm tc"><div class="bold" style="font-size:22px;color:var(--blue)">${avgSleepVal}h</div><div class="xs c-subtle mt4">avg sleep</div></div>
-      <div class="card-sm tc"><div class="bold" style="font-size:22px;color:var(--yellow)">${avgEnergyVal}/5</div><div class="xs c-subtle mt4">avg energy</div></div>
+      <div class="card-sm tc"><div class="bold" style="font-size:22px;color:var(--blue)">${avgSleep}h</div><div class="xs c-subtle mt4">avg sleep</div></div>
+      <div class="card-sm tc"><div class="bold" style="font-size:22px;color:var(--yellow)">${avgEnergy}/5</div><div class="xs c-subtle mt4">avg energy</div></div>
     </div>
   </div>`;
 
   html+=`<div class="card">
     <div class="card-title">Calorie Budget</div>
-    <div class="stat-row"><span class="stat-label">BMR (at rest)</span><span class="stat-val">${bmr()} kcal</span></div>
+    <div class="stat-row"><span class="stat-label">BMR</span><span class="stat-val">${bmr()} kcal</span></div>
     <div class="stat-row"><span class="stat-label">Activity today</span><span class="stat-val c-orange">+${actBurn(today())} kcal</span></div>
     <div class="stat-row"><span class="stat-label">TDEE today</span><span class="stat-val">${tdee()} kcal</span></div>
     <div class="stat-row"><span class="stat-label">Fat loss target</span><span class="stat-val">${target()} kcal</span></div>
-    <div class="stat-row"><span class="stat-label">Protein goal</span><span class="stat-val">${macroTargets().protein}g / day</span></div>
+    <div class="stat-row"><span class="stat-label">Protein goal</span><span class="stat-val">${currentMode().macros.protein}g / day</span></div>
   </div>`;
 
   html+=`<div class="card">
-    <div class="row mb12">
-      <div class="card-title f1" style="margin:0">Log Weight</div>
-      ${todayW?`<span class="xs c-green">✓ ${todayW} kg today</span>`:""}
-    </div>
-    <button class="btn btn-secondary" onclick="openModal('weightModal')">Log today's weight</button>
+    <div class="row mb12"><div class="card-title f1" style="margin:0">Log Today</div>${todayW?`<span class="xs c-green">✓ ${typeof todayW==="object"?todayW.kg:todayW} kg</span>`:""}</div>
+    <button class="btn btn-secondary" onclick="openModal('weightModal')">Log weight & measurements</button>
   </div>`;
-
   return html;
 }
 
-// ─── HISTORY ──────────────────────────────────────────────────────────────────
+// ── HISTORY ───────────────────────────────────────────────────────────────────
 function renderHistory() {
-  const allW=Object.entries(db.weights).sort(([a],[b])=>a.localeCompare(b));
-  const allMeals=Object.entries(db.meals).sort(([a],[b])=>b.localeCompare(a)).slice(0,14);
+  const allDays=Object.keys(db.logs).sort((a,b)=>b.localeCompare(a)).slice(0,14);
+  const sleepLog=Object.entries(db.checkins).filter(([,ci])=>ci.sleep_hrs).sort(([a],[b])=>b.localeCompare(a)).slice(0,7);
 
-  let html=`<div class="card">
-    <div class="card-title">Weight trend</div>
-    ${weightChart(db.weights)}
-  </div>`;
+  let html=`<div class="card"><div class="card-title">Weight trend</div>${weightChart()}</div>`;
 
-  // Calorie history
-  html+=`<div class="card">
-    <div class="card-title">Daily log</div>`;
-  if(allMeals.length===0) {
-    html+=`<div style="text-align:center;color:var(--muted);font-size:13px;padding:16px 0">No history yet — start logging meals</div>`;
-  } else {
-    allMeals.forEach(([date,meals])=>{
-      const total=meals.reduce((s,m)=>s+m.calories,0);
-      const burn=actBurn(date);
-      const tgt=bmr()+burn-500;
-      const diff=total-tgt;
-      const ci=db.checkins[date]||{};
-      html+=`<div class="act-item">
-        <div style="width:36px;text-align:center;font-size:18px">${ci.energy?["🪫","😐","🙂","💪","⚡"][ci.energy-1]:"—"}</div>
-        <div class="f1">
-          <div class="sm bold">${fmtDate(date)}</div>
-          <div class="xs c-subtle">${meals.length} meal${meals.length!==1?"s":""}${burn>0?" · 🏃 "+burn+" burned":""}</div>
-        </div>
-        <div class="tr">
-          <div class="sm bold">${total} kcal</div>
-          <div class="xs ${diff<=0?"c-green":"c-red"}">${diff<=0?"−"+Math.abs(diff):"+"+diff} vs target</div>
-        </div>
-      </div>`;
-    });
-  }
+  html+=`<div class="card"><div class="card-title">Daily log</div>`;
+  if(!allDays.length) html+=`<div class="empty">No history yet</div>`;
+  else allDays.forEach(date=>{
+    const logs=dayLogs(date), total=foodCals(date)+drinkCals(date);
+    const burn=actBurn(date), tgt=bmr()+burn-500, diff=total-tgt;
+    const hydro=totalHydro(date), ci=db.checkins[date]||{};
+    html+=`<div class="act-item">
+      <div style="width:36px;text-align:center;font-size:18px">${ci.energy?["🪫","😐","🙂","💪","⚡"][ci.energy-1]:"—"}</div>
+      <div class="f1">
+        <div class="sm bold">${fmtDate(date)}</div>
+        <div class="xs c-subtle">${logs.length} item${logs.length!==1?"s":""}${burn>0?" · 🏃 "+burn+" kcal":""} · 💧${hydro}ml</div>
+      </div>
+      <div class="tr">
+        <div class="sm bold">${total} kcal</div>
+        <div class="xs ${diff<=0?"c-green":"c-red"}">${diff<=0?"−"+Math.abs(diff):"+"+diff}</div>
+      </div>
+    </div>`;
+  });
   html+=`</div>`;
 
-  // Sleep history
-  const sleepEntries=Object.entries(db.checkins).filter(([,ci])=>ci.sleep_hrs).sort(([a],[b])=>b.localeCompare(a)).slice(0,7);
-  if(sleepEntries.length>0) {
-    html+=`<div class="card">
-      <div class="card-title">Sleep log</div>
-      ${sleepEntries.map(([date,ci])=>`
-        <div class="act-item">
-          <div style="font-size:22px">😴</div>
-          <div class="f1">
-            <div class="sm bold">${fmtDate(date)}</div>
-            <div class="xs c-subtle">${ci.sleep_hrs}h · quality ${ci.sleep_q||"?"}/5</div>
-          </div>
-          <div class="xs c-subtle">${["🪫","😐","🙂","💪","⚡"][(ci.energy||3)-1]} energy</div>
-        </div>`).join("")}
-    </div>`;
+  if(sleepLog.length) {
+    html+=`<div class="card"><div class="card-title">Sleep log</div>`;
+    sleepLog.forEach(([date,ci])=>{
+      html+=`<div class="act-item">
+        <div class="act-emoji">😴</div>
+        <div class="f1"><div class="sm bold">${fmtDate(date)}</div><div class="xs c-subtle">${ci.sleep_hrs}h · quality ${ci.sleep_q||"?"}/5</div></div>
+        <div class="xs c-subtle">${["🪫","😐","🙂","💪","⚡"][(ci.energy||3)-1]} energy</div>
+      </div>`;
+    });
+    html+=`</div>`;
   }
-
   return html;
 }
 
-// ─── HTML helpers ─────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function mbar(label,val,max,color) {
   const pct=Math.min(val/max*100,100).toFixed(1);
-  return `<div class="mbar">
-    <div class="mbar-top"><span>${label}</span><span class="mbar-val">${Math.round(val)}g</span></div>
-    <div class="mbar-track"><div class="mbar-fill" style="width:${pct}%;background:${color}"></div></div>
-  </div>`;
+  return `<div class="mbar"><div class="mbar-top"><span>${label}</span><span class="mbar-val">${typeof val==="number"&&val>100?Math.round(val)+"ml":Math.round(val)+(label==="Hydration"?"ml":"g")}</span></div><div class="mbar-track"><div class="mbar-fill" style="width:${pct}%;background:${color}"></div></div></div>`;
 }
-
-function weightChart(weights) {
-  const entries=Object.entries(weights).sort(([a],[b])=>a.localeCompare(b)).slice(-14);
-  if(entries.length<2) return `<div style="text-align:center;color:var(--muted);font-size:13px;padding:20px 0">Log at least 2 weights to see trend</div>`;
+function weightChart() {
+  const entries=Object.entries(db.weights)
+    .map(([d,v])=>[d,typeof v==="object"?v.kg:v])
+    .filter(([,v])=>v)
+    .sort(([a],[b])=>a.localeCompare(b)).slice(-14);
+  if(entries.length<2) return `<div class="empty">Log at least 2 weights to see trend</div>`;
   const vals=entries.map(([,v])=>v), mn=Math.min(...vals)-.5, mx=Math.max(...vals)+.5;
   const W=280,H=80,px=i=>(i/(entries.length-1))*W,py=v=>H-((v-mn)/(mx-mn))*H;
   const pts=entries.map(([,v],i)=>`${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(" ");
-  return `<div class="chart-wrap"><svg width="100%" viewBox="0 0 ${W} ${H+24}" style="overflow:visible">
-    <defs><linearGradient id="wg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#7c6ff7" stop-opacity=".3"/>
-      <stop offset="100%" stop-color="#7c6ff7" stop-opacity="0"/>
-    </linearGradient></defs>
+  return `<div><svg width="100%" viewBox="0 0 ${W} ${H+24}" style="overflow:visible">
+    <defs><linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#7c6ff7" stop-opacity=".3"/><stop offset="100%" stop-color="#7c6ff7" stop-opacity="0"/></linearGradient></defs>
     <polygon points="0,${H} ${pts} ${W},${H}" fill="url(#wg)"/>
     <polyline points="${pts}" fill="none" stroke="#7c6ff7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
     ${entries.map(([,v],i)=>`<circle cx="${px(i).toFixed(1)}" cy="${py(v).toFixed(1)}" r="3.5" fill="#7c6ff7"/>`).join("")}
@@ -857,95 +749,66 @@ function weightChart(weights) {
     <text x="${W+4}" y="${py(vals[vals.length-1]).toFixed(1)}" font-size="10" fill="#7c6ff7" dominant-baseline="middle">${vals[vals.length-1]}kg</text>
   </svg></div>`;
 }
-
-function mealEmoji(name) {
-  const n=(name||"").toLowerCase();
-  if(n.includes("salad")) return "🥗";
-  if(n.includes("egg")) return "🍳";
-  if(n.includes("chicken")) return "🍗";
-  if(n.includes("fish")||n.includes("salmon")) return "🐟";
-  if(n.includes("pasta")||n.includes("rice")) return "🍝";
-  if(n.includes("coffee")||n.includes("tea")) return "☕";
-  if(n.includes("halloumi")||n.includes("cheese")) return "🧀";
-  if(n.includes("sandwich")||n.includes("toast")) return "🥪";
-  if(n.includes("fruit")||n.includes("apple")) return "🍎";
-  if(n.includes("soup")) return "🥣";
-  if(n.includes("yogurt")||n.includes("yoghurt")) return "🥛";
-  return "🍽";
+function mealEmoji(n) {
+  const s=(n||"").toLowerCase();
+  if(s.includes("salad"))return"🥗";if(s.includes("egg"))return"🍳";
+  if(s.includes("chicken"))return"🍗";if(s.includes("fish")||s.includes("salmon"))return"🐟";
+  if(s.includes("pasta")||s.includes("rice"))return"🍝";
+  if(s.includes("halloumi")||s.includes("cheese"))return"🧀";
+  if(s.includes("sandwich")||s.includes("toast"))return"🥪";
+  if(s.includes("yogurt"))return"🥛";if(s.includes("soup"))return"🥣";
+  if(s.includes("souvlaki")||s.includes("kebab"))return"🥙";return"🍽";
 }
+function drinkEmoji(type) {
+  return{water:"💧",coffee:"☕",juice:"🥤",alcohol:"🍺",other:"🥛"}[type]||"💧";
+}
+function sportEmoji(t){return{Run:"🏃",Walk:"🚶",Ride:"🚴",Swim:"🏊",Workout:"🏊",Hike:"🥾"}[t]||"💪";}
 
-// ─── Check-in ─────────────────────────────────────────────────────────────────
+// ── Check-in ──────────────────────────────────────────────────────────────────
 let ciState={sleep_hrs:null,sleep_q:null,energy:null};
-
-function setSleep(n) {
-  ciState.sleep_hrs=n;
-  document.querySelectorAll("[id^='sl_']").forEach(el=>el.classList.remove("selected"));
-  document.getElementById("sl_"+n)?.classList.add("selected");
-}
-function setSleepQ(n) {
-  ciState.sleep_q=n;
-  document.querySelectorAll("[id^='sq_']").forEach(el=>el.classList.remove("selected"));
-  document.getElementById("sq_"+n)?.classList.add("selected");
-}
-function setEnergy(n) {
-  ciState.energy=n;
-  document.querySelectorAll("[id^='en_']").forEach(el=>el.classList.remove("selected"));
-  document.getElementById("en_"+n)?.classList.add("selected");
-}
-function doneCheckin() {
-  if(!ciState.energy) { alert("Tap your energy level to continue"); return; }
+function setSleep(n){ciState.sleep_hrs=n;document.querySelectorAll("[id^='sl_']").forEach(e=>e.classList.remove("selected"));document.getElementById("sl_"+n)?.classList.add("selected");}
+function setSleepQ(n){ciState.sleep_q=n;document.querySelectorAll("[id^='sq_']").forEach(e=>e.classList.remove("selected"));document.getElementById("sq_"+n)?.classList.add("selected");}
+function setEnergy(n){ciState.energy=n;document.querySelectorAll("[id^='en_']").forEach(e=>e.classList.remove("selected"));document.getElementById("en_"+n)?.classList.add("selected");}
+function doneCheckin(){
+  if(!ciState.energy){alert("Tap your energy level");return;}
   if(!db.checkins[today()]) db.checkins[today()]={};
-  Object.assign(db.checkins[today()], ciState, {water:0});
+  Object.assign(db.checkins[today()],ciState);
   ciState={sleep_hrs:null,sleep_q:null,energy:null};
-  save(); render();
-}
-function setWater(n) {
-  if(!db.checkins[today()]) db.checkins[today()]={energy:3,water:0};
-  db.checkins[today()].water=Math.max(0,Math.min(8,n));
-  save(); render();
+  save();render();
 }
 
-// ─── Meal modal ───────────────────────────────────────────────────────────────
+// ── Log modal (food + drink) ───────────────────────────────────────────────────
+function setLogType(type) {
+  logType=type;
+  document.querySelectorAll(".type-pill").forEach(p=>p.classList.remove("selected"));
+  document.getElementById("type"+type.charAt(0).toUpperCase()+type.slice(1))?.classList.add("selected");
+  const isFood=type==="food";
+  document.getElementById("logModalTitle").textContent=isFood?"Log Food":"Log Drink";
+  document.getElementById("logDesc").placeholder=isFood?"e.g. Greek salad with halloumi, olives and olive oil…":"e.g. Large flat white, 500ml water, glass of orange juice…";
+  document.getElementById("photoHint").textContent=isFood?"— recommended for complex meals":"— optional for drinks";
+}
+
+function openLogModal(type="food") {
+  logType=type||"food"; pendingLog=null; pendingPhoto=null;
+  document.getElementById("logDesc").value="";
+  document.getElementById("photoPrev").style.display="none";
+  document.getElementById("removePhoto").style.display="none";
+  document.getElementById("photoIn").value="";
+  document.getElementById("logErr").style.display="none";
+  document.getElementById("logResult").style.display="none";
+  document.getElementById("logAnalyseBtn").style.display="block";
+  document.getElementById("analyseBtn").textContent="Analyse with AI";
+  document.getElementById("analyseBtn").disabled=false;
+  setLogType(logType);
+  openModal("logModal");
+}
+
 function openModal(id) {
-  if(id==="mealModal") {
-    pendingMeal=null; pendingPhoto=null;
-    document.getElementById("mealDesc").value="";
-    document.getElementById("photoPrev").style.display="none";
-    document.getElementById("removePhoto").style.display="none";
-    document.getElementById("photoIn").value="";
-    document.getElementById("mealErr").style.display="none";
-    document.getElementById("mealResult").style.display="none";
-    document.getElementById("mealAnalyseBtn").style.display="block";
-    document.getElementById("analyseBtn").textContent="Analyse with AI";
-    document.getElementById("analyseBtn").disabled=false;
-  }
-  if(id==="actModal") {
-    document.getElementById("actName").value="";
-    document.getElementById("actDur").value="";
-    document.getElementById("actDist").value="";
-    document.getElementById("actCal").value="";
-    document.getElementById("actErr").style.display="none";
-    document.getElementById("actName").dataset.emoji="💪";
-    document.getElementById("actName").dataset.met="5";
-    selectedActMET=null; selectedActEmoji="💪";
-    document.getElementById("quickActs").innerHTML=QUICK_ACTS.map(a=>
-      `<button class="quick-act" onclick="pickAct('${a.name}','${a.emoji}',${a.met})">
-        <span class="quick-act-e">${a.emoji}</span><span class="quick-act-l">${a.name}</span>
-      </button>`
-    ).join("");
-  }
-  if(id==="modeModal") {
-    document.getElementById("modeGrid").innerHTML=MODES.map(m=>
-      `<button class="mode-card ${db.mode===m.id?"active":""}" onclick="setMode('${m.id}')">
-        <span class="mode-emoji">${m.emoji}</span>
-        <div class="mode-name">${m.name}</div>
-        <div class="mode-desc">${m.desc}</div>
-      </button>`
-    ).join("");
-  }
+  if(id==="actModal"){document.getElementById("actName").value="";document.getElementById("actDur").value="";document.getElementById("actDist").value="";document.getElementById("actCal").value="";document.getElementById("actErr").style.display="none";selEmoji="💪";selMET=5;document.getElementById("actName").dataset.met="5";document.getElementById("quickActs").innerHTML=QUICK_ACTS.map(a=>`<button class="quick-act" onclick="pickAct('${a.name}','${a.emoji}',${a.met})"><span class="quick-act-e">${a.emoji}</span><span class="quick-act-l">${a.name}</span></button>`).join("");}
+  if(id==="modeModal"){document.getElementById("modeGrid").innerHTML=MODES.map(m=>`<button class="mode-card ${db.mode===m.id?"active":""}" onclick="setMode('${m.id}')"><span class="mode-emoji">${m.emoji}</span><div class="mode-name">${m.name}</div><div class="mode-desc">${m.desc}</div></button>`).join("");}
   document.getElementById(id).style.display="flex";
 }
-function closeModal(id) { document.getElementById(id).style.display="none"; }
+function closeModal(id){document.getElementById(id).style.display="none";}
 
 function handlePhoto(input) {
   const file=input.files[0]; if(!file) return;
@@ -970,190 +833,185 @@ function handlePhoto(input) {
   };
   reader.readAsDataURL(file);
 }
-function clearPhoto() {
-  pendingPhoto=null;
-  document.getElementById("photoPrev").style.display="none";
-  document.getElementById("removePhoto").style.display="none";
-  document.getElementById("photoIn").value="";
-}
-function resetMeal() {
-  pendingMeal=null;
-  document.getElementById("mealResult").style.display="none";
-  document.getElementById("mealAnalyseBtn").style.display="block";
-}
+function clearPhoto(){pendingPhoto=null;document.getElementById("photoPrev").style.display="none";document.getElementById("removePhoto").style.display="none";document.getElementById("photoIn").value="";}
+function resetLog(){pendingLog=null;document.getElementById("logResult").style.display="none";document.getElementById("logAnalyseBtn").style.display="block";}
 
-async function analyseMeal() {
-  const desc=document.getElementById("mealDesc").value.trim();
-  if(!desc && !pendingPhoto) { showErr("mealErr","Add a description or photo"); return; }
-  document.getElementById("mealErr").style.display="none";
+async function analyseLog() {
+  const desc=document.getElementById("logDesc").value.trim();
+  if(!desc&&!pendingPhoto){showErr("logErr","Add a description or photo");return;}
+  document.getElementById("logErr").style.display="none";
   const btn=document.getElementById("analyseBtn");
   btn.disabled=true; btn.innerHTML='<span class="spin"></span>Analysing…';
   try {
-    const mt=macroTargets();
+    const mt=currentMode().macros;
+    const isFood=logType==="food";
     const content=[];
     if(pendingPhoto) content.push({type:"image",source:{type:"base64",media_type:pendingPhoto.mime,data:pendingPhoto.base64}});
-    content.push({type:"text",text:`You are a nutrition expert familiar with Mediterranean and Cypriot cuisine.
-Analyse this meal for someone with these goals: ${currentMode().name} mode, targets: protein ${mt.protein}g, carbs ${mt.carbs}g, fat ${mt.fat}g/day.
-${desc?"Description: "+desc:"No description — use the image."}
-Context: ${PROFILE.context}
-Reply ONLY with valid JSON, no markdown:
-{"calories":number,"protein":number,"carbs":number,"fat":number,"name":"concise meal name","confidence":"low|medium|high","notes":"one helpful insight about this meal for their goals","macroTip":"one specific tip e.g. add halloumi to hit protein target"}`});
 
-    const r=await fetch("/api/claude",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:500,messages:[{role:"user",content}]})
-    });
+    let prompt;
+    if(isFood) {
+      prompt=`Nutrition expert. Mediterranean/Cypriot cuisine specialist. Analyse this meal.
+Goal: ${currentMode().name}. Targets: protein ${mt.protein}g carbs ${mt.carbs}g fat ${mt.fat}g/day.
+${desc?"Description: "+desc:"Image only."}
+Context: ${PROFILE.context}
+Reply ONLY valid JSON no markdown:
+{"calories":number,"protein":number,"carbs":number,"fat":number,"name":"short name","confidence":"low|medium|high","notes":"one insight for their goal","macroTip":"specific tip","micros":{"zinc":"low|ok|high","vitD":"low|ok|high","magnesium":"low|ok|high","iron":"low|ok|high","omega3":"low|ok|high"}}`;
+    } else {
+      prompt=`Nutrition expert. Analyse this drink for someone in Cyprus (hot climate, needs 2500ml hydration daily).
+Type hint: ${logType}. ${desc?"Description: "+desc:"Image only."}
+Estimate volume, hydration value (coffee counts less due to diuretic effect), caffeine, and calories.
+Reply ONLY valid JSON no markdown:
+{"name":"drink name","volume_ml":number,"hydration_ml":number,"caffeine_mg":number,"calories":number,"confidence":"low|medium|high","notes":"one relevant tip e.g. good hydration choice or caffeine warning"}`;
+    }
+    content.push({type:"text",text:prompt});
+
+    const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:500,messages:[{role:"user",content}]})});
     if(!r.ok) throw new Error("API "+r.status);
     const d=await r.json();
     const text=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
     const m=text.match(/\{[\s\S]*?\}/);
     if(!m) throw new Error("No JSON in response");
-    pendingMeal=JSON.parse(m[0]);
-    const cc={high:"var(--green)",medium:"var(--yellow)",low:"var(--red)"}[pendingMeal.confidence]||"var(--subtle)";
-    document.getElementById("rName").textContent=pendingMeal.name||desc;
-    document.getElementById("rConf").textContent=pendingMeal.confidence;
+    pendingLog=JSON.parse(m[0]);
+    pendingLog._isFood=isFood;
+
+    const cc={high:"var(--green)",medium:"var(--yellow)",low:"var(--red)"}[pendingLog.confidence]||"var(--subtle)";
+    document.getElementById("rName").textContent=pendingLog.name||desc;
+    document.getElementById("rConf").textContent=pendingLog.confidence;
     document.getElementById("rConf").style.cssText=`background:${cc}22;color:${cc}`;
-    document.getElementById("rCal").textContent=pendingMeal.calories;
-    document.getElementById("rPro").textContent=pendingMeal.protein;
-    document.getElementById("rCarb").textContent=pendingMeal.carbs;
-    document.getElementById("rFat").textContent=pendingMeal.fat;
-    document.getElementById("rNotes").textContent=pendingMeal.notes?"💡 "+pendingMeal.notes:"";
-    document.getElementById("rMacroTip").textContent=pendingMeal.macroTip?"🎯 "+pendingMeal.macroTip:"";
-    document.getElementById("mealAnalyseBtn").style.display="none";
-    document.getElementById("mealResult").style.display="block";
-  } catch(e) {
-    showErr("mealErr","Analysis failed: "+e.message);
-    btn.disabled=false; btn.textContent="Analyse with AI";
-  }
+    document.getElementById("rNotes").textContent=pendingLog.notes?"💡 "+pendingLog.notes:"";
+    document.getElementById("rTip").textContent=pendingLog.macroTip?"🎯 "+pendingLog.macroTip:"";
+
+    if(isFood) {
+      document.getElementById("rFoodMacros").style.display="block";
+      document.getElementById("rDrinkInfo").style.display="none";
+      document.getElementById("rCal").textContent=pendingLog.calories;
+      document.getElementById("rPro").textContent=pendingLog.protein;
+      document.getElementById("rCarb").textContent=pendingLog.carbs;
+      document.getElementById("rFat").textContent=pendingLog.fat;
+      // Show micro badges
+      const micros=pendingLog.micros||{};
+      document.getElementById("rMicros").innerHTML=Object.entries(micros).map(([k,v])=>{
+        const col=v==="high"?"var(--green)":v==="low"?"var(--red)":"var(--subtle)";
+        const names={zinc:"Zinc",vitD:"Vit D",magnesium:"Mg",iron:"Iron",omega3:"Omega-3"};
+        return `<span class="micro-badge" style="background:${col}22;color:${col}">${names[k]||k}: ${v}</span>`;
+      }).join("");
+    } else {
+      document.getElementById("rFoodMacros").style.display="none";
+      document.getElementById("rDrinkInfo").style.display="block";
+      document.getElementById("rMl").textContent=pendingLog.volume_ml||"?";
+      document.getElementById("rHydro").textContent=pendingLog.hydration_ml||"?";
+      document.getElementById("rCaff").textContent=pendingLog.caffeine_mg||0;
+      document.getElementById("rDrinkCal").textContent=pendingLog.calories||0;
+    }
+
+    document.getElementById("logAnalyseBtn").style.display="none";
+    document.getElementById("logResult").style.display="block";
+  } catch(e){showErr("logErr","Analysis failed: "+e.message);btn.disabled=false;btn.textContent="Analyse with AI";}
 }
 
-function confirmMeal() {
-  if(!pendingMeal) return;
-  const t=today();
-  const meal={
+function confirmLog() {
+  if(!pendingLog) return;
+  const t=today(), desc=document.getElementById("logDesc").value.trim();
+  const isFood=pendingLog._isFood;
+  const entry={
     id:Date.now().toString(),
     time:new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),
-    name:pendingMeal.name||document.getElementById("mealDesc").value.trim(),
-    calories:pendingMeal.calories, protein:pendingMeal.protein,
-    carbs:pendingMeal.carbs, fat:pendingMeal.fat,
-    notes:pendingMeal.notes, confidence:pendingMeal.confidence,
+    type:isFood?"food":logType,
+    name:pendingLog.name||desc,
+    confidence:pendingLog.confidence,
+    notes:pendingLog.notes,
     preview:pendingPhoto?.preview||null,
+    // Food fields
+    calories:pendingLog.calories||0,
+    protein:isFood?pendingLog.protein:0,
+    carbs:isFood?pendingLog.carbs:0,
+    fat:isFood?pendingLog.fat:0,
+    micros:isFood?pendingLog.micros:null,
+    // Drink fields
+    ml:isFood?0:(pendingLog.volume_ml||0),
+    hydro_ml:isFood?0:(pendingLog.hydration_ml||0),
+    caffeine_mg:isFood?0:(pendingLog.caffeine_mg||0),
   };
-  if(!db.meals[t]) db.meals[t]=[];
-  db.meals[t].push(meal);
-  save(); closeModal("mealModal"); render();
+  if(!db.logs[t]) db.logs[t]=[];
+  db.logs[t].push(entry);
+  save(); closeModal("logModal"); render();
 }
 
-function delMeal(id) {
-  const t=today();
-  db.meals[t]=(db.meals[t]||[]).filter(m=>m.id!==id);
-  save(); render();
-}
+function delLog(id){const t=today();db.logs[t]=(db.logs[t]||[]).filter(l=>l.id!==id);save();render();}
 
-// ─── Activity ─────────────────────────────────────────────────────────────────
-function pickAct(name,emoji,met) {
-  selectedActMET=met; selectedActEmoji=emoji;
-  document.getElementById("actName").value=name;
-  document.getElementById("actName").dataset.met=met;
-  document.querySelectorAll(".quick-act").forEach(b=>b.style.background="");
-  autoCalcCal();
-  document.getElementById("actDur").focus();
-}
-function autoCalcCal() {
-  const dur=parseInt(document.getElementById("actDur").value)||0;
-  const met=parseFloat(document.getElementById("actName").dataset.met)||5;
-  if(dur>0) document.getElementById("actCal").value=metCal(met,dur,db.profile.weight);
-}
-function confirmAct() {
-  const name=document.getElementById("actName").value.trim();
-  const dur=parseInt(document.getElementById("actDur").value)||0;
-  const dist=parseFloat(document.getElementById("actDist").value)||0;
-  const cal=parseInt(document.getElementById("actCal").value)||0;
-  if(!name||dur<=0) { showErr("actErr","Enter activity and duration"); return; }
-  const t=today();
-  const act={id:Date.now().toString(),name,duration:dur,distance:dist||null,calories:cal,emoji:selectedActEmoji||"💪",time:new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})};
+// ── Activity ──────────────────────────────────────────────────────────────────
+function pickAct(name,emoji,met){selEmoji=emoji;selMET=met;document.getElementById("actName").value=name;document.getElementById("actName").dataset.met=met;autoCalcCal();document.getElementById("actDur").focus();}
+function autoCalcCal(){const dur=parseInt(document.getElementById("actDur").value)||0,met=parseFloat(document.getElementById("actName").dataset.met)||5;if(dur>0)document.getElementById("actCal").value=metCal(met,dur,db.profile.weight);}
+function confirmAct(){
+  const name=document.getElementById("actName").value.trim(),dur=parseInt(document.getElementById("actDur").value)||0,dist=parseFloat(document.getElementById("actDist").value)||0,cal=parseInt(document.getElementById("actCal").value)||0;
+  if(!name||dur<=0){showErr("actErr","Enter activity and duration");return;}
+  const t=today(), act={id:Date.now().toString(),name,duration:dur,distance:dist||null,calories:cal,emoji:selEmoji||"💪",time:new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})};
   if(!db.activities[t]) db.activities[t]=[];
   db.activities[t].push(act);
-  save(); closeModal("actModal"); render();
+  save();closeModal("actModal");render();
 }
-function delAct(id) {
-  const t=today();
-  db.activities[t]=(db.activities[t]||[]).filter(a=>a.id!==id);
-  save(); render();
-}
+function delAct(id){const t=today();db.activities[t]=(db.activities[t]||[]).filter(a=>a.id!==id);save();render();}
 
-// ─── Weight ───────────────────────────────────────────────────────────────────
-function confirmWeight() {
+// ── Weight & measurements ─────────────────────────────────────────────────────
+function confirmWeight(){
   const w=parseFloat(document.getElementById("weightIn").value);
+  const waist=parseFloat(document.getElementById("waistIn").value)||null;
+  const rhr=parseFloat(document.getElementById("rhrIn").value)||null;
   if(isNaN(w)||w<30||w>300) return;
-  db.weights[today()]=w; db.profile.weight=w;
-  save(); closeModal("weightModal"); render();
+  db.weights[today()]={kg:w, waist_cm:waist, rhr_bpm:rhr};
+  db.profile.weight=w;
+  save();closeModal("weightModal");render();
 }
 
-// ─── Mode ─────────────────────────────────────────────────────────────────────
-function setMode(id) {
-  db.mode=id; save();
-  document.querySelectorAll(".mode-card").forEach(c=>c.classList.toggle("active",c.onclick.toString().includes(`'${id}'`)));
-  render();
-}
+// ── Mode ──────────────────────────────────────────────────────────────────────
+function setMode(id){db.mode=id;save();render();}
 
-// ─── AI Insight ───────────────────────────────────────────────────────────────
-async function getInsight() {
-  const t=today(), meals=db.meals[t]||[], acts=db.activities[t]||[];
-  const ci=db.checkins[t]||{};
-  const mode=currentMode();
-  const mt=macroTargets();
-
-  // Build context from last 7 days
+// ── AI Insight ────────────────────────────────────────────────────────────────
+async function getInsight(){
+  const t=today(), logs=dayLogs(t), acts=[...(db.activities[t]||[]),...(db.stravaCache[t]||[])];
+  const ci=db.checkins[t]||{}, mode=currentMode(), mt=currentMode().macros;
   const days7=[...Array(7)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()-i);return d.toISOString().slice(0,10);});
-  const weekSummary=days7.map(d=>{
-    const ms=db.meals[d]||[], as=db.activities[d]||[], ci2=db.checkins[d]||{};
-    return `${d}: ${ms.reduce((s,m)=>s+m.calories,0)} kcal eaten, ${actBurn(d)} burned, energy ${ci2.energy||"?"}`;
-  }).join("\n");
-
-  const prompt=`You are a smart personal health coach for Alex (33yr male, ${db.profile.weight}kg, ${db.profile.height}cm, Cyprus).
-Goal: ${mode.name}. Target: protein ${mt.protein}g, carbs ${mt.carbs}g, fat ${mt.fat}g.
+  const weekSummary=days7.map(d=>`${d}: ${foodCals(d)} kcal food, ${totalHydro(d)}ml hydration, ${actBurn(d)} burned, energy ${(db.checkins[d]||{}).energy||"?"}`).join("\n");
+  const prompt=`Smart personal health coach for Alex (33yr male, ${db.profile.weight}kg, ${db.profile.height}cm, Cyprus).
+Goal: ${mode.name}. Targets: protein ${mt.protein}g carbs ${mt.carbs}g fat ${mt.fat}g, hydration 2500ml.
 Context: ${PROFILE.context}
-
-Today so far:
-- Meals: ${meals.map(m=>`${m.name} (${m.calories}kcal, P:${m.protein}g)`).join(", ")||"none logged"}
-- Activity: ${acts.map(a=>`${a.name} ${a.duration}min`).join(", ")||"none"}
-- Sleep: ${ci.sleep_hrs||"?"}h quality ${ci.sleep_q||"?"}/5, energy ${ci.energy||"?"}/5
-- Water: ${ci.water||0}/8 glasses
-
-Last 7 days:
-${weekSummary}
-
-Give ONE specific, actionable, personalised insight for today. Be direct and practical — not generic. Consider their hot climate, family meals, running schedule. Max 2 sentences. No emojis in the text itself.`;
-
-  try {
-    const r=await fetch("/api/claude",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:150,messages:[{role:"user",content:prompt}]})
-    });
+Today: food=${logs.filter(l=>l.type==="food").map(l=>l.name+"("+l.calories+"kcal)").join(",")||"none"}, drinks=${logs.filter(l=>l.type!=="food").map(l=>l.name).join(",")||"none"}, hydration=${totalHydro(t)}ml, caffeine=${totalCaffeine(t)}mg, activity=${acts.map(a=>a.name).join(",")||"none"}, sleep=${ci.sleep_hrs||"?"}h energy=${ci.energy||"?"}/5
+Last 7 days:\n${weekSummary}
+ONE specific actionable insight for today. Direct and practical. Max 2 sentences.`;
+  try{
+    const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:150,messages:[{role:"user",content:prompt}]})});
     const d=await r.json();
     db.insight=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
-    db.insightDate=t;
-    save(); render();
-  } catch(e) { alert("Insight failed: "+e.message); }
+    db.insightDate=t; save(); render();
+  }catch(e){alert("Insight failed: "+e.message);}
 }
 
-// ─── Utils ────────────────────────────────────────────────────────────────────
-function showErr(id,msg) {
-  const el=document.getElementById(id);
-  el.textContent=msg; el.style.display="block";
+// ── Micronutrient alert ───────────────────────────────────────────────────────
+async function getMicroAlert(){
+  const days7=[...Array(7)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()-i);return d.toISOString().slice(0,10);});
+  const allMicros={zinc:[],vitD:[],magnesium:[],iron:[],omega3:[]};
+  days7.forEach(d=>dayLogs(d).filter(l=>l.micros).forEach(l=>{
+    Object.entries(l.micros||{}).forEach(([k,v])=>{if(allMicros[k]) allMicros[k].push(v);});
+  }));
+  const summary=Object.entries(allMicros).map(([k,vals])=>{
+    if(!vals.length) return `${k}: no data`;
+    const lows=vals.filter(v=>v==="low").length, total=vals.length;
+    return `${k}: ${lows}/${total} meals low`;
+  }).join(", ");
+  const prompt=`Nutritionist for Alex (fat loss goal, runs 30km/week, Cyprus, Mediterranean diet).
+Micronutrient data from last 7 days of meals: ${summary}
+Give a brief, specific, actionable weekly micronutrient summary. Flag any deficiencies and suggest 1-2 specific Cypriot/Mediterranean foods to fix them. Max 3 sentences.`;
+  try{
+    const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:200,messages:[{role:"user",content:prompt}]})});
+    const d=await r.json();
+    db.microAlerts=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+    db.microAlertsDate=today(); save(); render();
+  }catch(e){alert("Micro check failed: "+e.message);}
 }
 
-function attachListeners() {
-  // Close modals on backdrop tap
-  document.querySelectorAll(".backdrop").forEach(b=>{
-    b.onclick=e=>{ if(e.target===b) b.style.display="none"; };
-  });
-}
+function showErr(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display="block";}
 
-// Init
+// ── Init ──────────────────────────────────────────────────────────────────────
 render();
 </script>
 </body>
