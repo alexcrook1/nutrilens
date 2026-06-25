@@ -1,4 +1,3 @@
-// api/strava-auth.js - Exchange OAuth code for tokens
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -6,7 +5,7 @@ module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
 
   try {
-    const { code } = req.body;
+    const { code, redirect_uri } = req.body;
     const response = await fetch("https://www.strava.com/oauth/token", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -14,11 +13,12 @@ module.exports = async function handler(req, res) {
         client_id: process.env.STRAVA_CLIENT_ID,
         client_secret: process.env.STRAVA_CLIENT_SECRET,
         code,
-        grant_type: "authorization_code"
+        grant_type: "authorization_code",
+        redirect_uri: redirect_uri || "https://nutrilens-ivory-delta.vercel.app/"
       })
     });
     const data = await response.json();
-    if (!response.ok) return res.status(400).json({ error: data.message });
+    if (!response.ok) return res.status(400).json({ error: data.message||"Auth failed", raw: data });
     return res.status(200).json({
       access_token: data.access_token,
       refresh_token: data.refresh_token,
