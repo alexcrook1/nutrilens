@@ -1032,7 +1032,12 @@ function showErr(id,msg){const el=document.getElementById(id);el.textContent=msg
 let stravaLoading=false;
 function stravaConnected(){return !!(db.stravaTokens&&db.stravaTokens.access_token);}
 function connectStrava(){
-  const url="https://www.strava.com/oauth/authorize?client_id="+STRAVA_CLIENT_ID+"&response_type=code&redirect_uri="+encodeURIComponent(window.location.origin+"/?strava=1")+"&approval_prompt=auto&scope=activity:read_all&state=nutrilens";
+  const redirect=window.location.origin+"/";
+  const url="https://www.strava.com/oauth/authorize?client_id="+STRAVA_CLIENT_ID+
+    "&response_type=code"+
+    "&redirect_uri="+encodeURIComponent(redirect)+
+    "&approval_prompt=auto&scope=activity:read_all&state=nutrilens";
+  console.log("Strava auth URL:", url);
   window.location.href=url;
 }
 async function ensureFreshToken(){
