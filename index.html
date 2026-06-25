@@ -1027,8 +1027,55 @@ Give a brief, specific, actionable weekly micronutrient summary. Flag any defici
 
 function showErr(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display="block";}
 
-// ── Init ──────────────────────────────────────────────────────────────────────
+
+// ── Strava OAuth ────────────────────────────────────────────────────────────────────────
+let stravaLoading=false;
+function stravaConnected(){return !!(db.stravaTokens&&db.stravaTokens.access_token);}
+function connectStrava(){
+  const url="https://www.strava.com/oauth/authorize?client_id="+STRAVA_CLIENT_ID+"&response_type=code&redirect_uri="+encodeURIComponent(window.location.origin+"/?strava=1")+"&approval_prompt=auto&scope=activity:read_all&state=nutrilens";
+  window.location.href=url;
+}
+async function ensureFreshToken(){
+  if(!db.stravaTokens) return null;
+  const now=Math.floor(Date.now()/1000);
+  if(db.stravaTokens.expires_at>now+300) return db.stravaTokens.access_token;
+  try{
+    const r=await fetch("/api/strava-refresh",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({refresh_token:db.stravaTokens.refresh_token})});
+    const d=await r.json();
+    if(d.access_token){db.stravaTokens={...db.stravaTokens,...d};save();return d.access_token;}
+  }catch(e){console.warn("Token refresh:",e);}
+  return null;
+}
+async function syncStrava(force=false){
+  const t=today();
+  if(!stravaConnected()) return;
+  if(!force&&db.stravaCache[t]!==undefined) return;
+  stravaLoading=true; render();
+  try{
+    const token=await ensureFreshToken();
+    if(!token){stravaLoading=false;render();return;}
+    const r=await fetch("/api/strava-activities",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({access_token:token,date:t})});
+    const d=await r.json();
+    if(Array.isArray(d.activities)){db.stravaCache[t]=d.activities;save();}
+  }catch(e){console.warn("Strava sync:",e.message);}
+  stravaLoading=false; render();
+}
+async function checkStravaCallback(){
+  const params=new URLSearchParams(window.location.search);
+  const code=params.get("code"),state=params.get("state");
+  if(!code||state!=="nutrilens") return;
+  try{
+    const r=await fetch("/api/strava-auth",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code})});
+    const d=await r.json();
+    if(d.access_token){db.stravaTokens=d;save();window.history.replaceState({},"","/");render();syncStrava(true);}
+  }catch(e){console.warn("Strava auth:",e);}
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────────────────
+checkStravaCallback();
 render();
+if(stravaConnected()) syncStrava();
+
 </script>
 </body>
 </html>
