@@ -272,6 +272,9 @@ select.input{appearance:none}
 <script>
 // ── Config ────────────────────────────────────────────────────────────────────
 const SK = "nutrilens_v7";
+const STRAVA_CLIENT_ID = "261019";
+const STRAVA_REDIRECT_URI = window.location.origin + "/strava-callback";
+
 const PROFILE = {
   height:173, weight:77.55, age:33, sex:"male", targetWeight:70,
   location:"Cyprus", climate:"hot_mediterranean",
@@ -305,6 +308,7 @@ function freshDB() {
     // weights entries: {date: {kg, waist_cm, rhr_bpm}}
     checkins:{},   // {date: {sleep_hrs,sleep_q,energy,water(legacy)}}
     stravaCache:{},
+    stravaTokens:null, // {access_token, refresh_token, expires_at, athlete}
     insight:null, insightDate:null,
     microAlerts:null, microAlertsDate:null
   };
@@ -346,7 +350,9 @@ let currentTab="today", pendingPhoto=null, pendingLog=null, logType="food", selE
 function switchTab(tab) {
   currentTab=tab;
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.tab===tab));
-  render();
+  checkStravaCallback();
+render();
+if(stravaConnected()) syncStrava();
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
@@ -506,10 +512,11 @@ function renderActivity() {
 
   let html=`<div class="card">
     <div class="row mb12">
-      <div class="card-title f1" style="margin:0">Today</div>
-      <button class="btn btn-primary btn-sm" onclick="openModal('actModal')">+ Add</button>
+      <div class="card-title f1" style="margin:0">Today ${stravaConnected()?'<span class="xs c-strava">· Strava connected</span>':''}</div>
+      ${stravaConnected()?`<button class="btn btn-sm btn-secondary" onclick="syncStrava(true)">${stravaLoading?'Syncing…':'🟠 Sync'}</button>`:`<button class="btn btn-sm" style="background:rgba(249,115,22,.15);color:var(--strava);border:1px solid rgba(249,115,22,.3)" onclick="connectStrava()">🟠 Connect Strava</button>`}
+      <button class="btn btn-primary btn-sm" onclick="openModal('actModal')">+ Manual</button>
     </div>`;
-  if(allActs.length===0) html+=`<div class="empty">No activities yet today</div>`;
+  if(allActs.length===0) html+=`<div class="empty">${stravaConnected()?"No Strava activities today — or tap Sync":"Connect Strava to auto-sync runs and walks"}</div>`;
   else {
     allActs.forEach(a=>{
       const dist=a.distance_m?`${(a.distance_m/1000).toFixed(1)}km`:a.distance?`${a.distance}km`:"";
