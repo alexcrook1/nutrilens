@@ -262,9 +262,9 @@ select.input{appearance:none}
 <!-- MODE MODAL -->
 <div class="backdrop" id="modeModal" style="display:none">
   <div class="modal">
-    <div class="modal-hdr"><div class="modal-title">Goal Mode</div><button class="modal-close" onclick="closeModal('modeModal')">×</button></div>
-    <div class="xs c-subtle mb12">Your goal shapes AI suggestions and macro targets. Change anytime.</div>
-    <div class="mode-grid" id="modeGrid"></div>
+    <div class="modal-hdr"><div class="modal-title">Training & Goal Focus</div><button class="modal-close" onclick="closeModal('modeModal')">×</button></div>
+    <div class="xs c-subtle mb12">Choose your current focus. The app adjusts your calorie target, macro splits, AI suggestions and nutrition tips around it.</div>
+    <div id="modeGrid"></div>
     <button class="btn btn-primary btn-full mt12" onclick="closeModal('modeModal')">Done</button>
   </div>
 </div>
@@ -281,12 +281,26 @@ const PROFILE = {
   context:"Works 8am-2pm Cyprus. Hot climate. Two young children. Family meals, no ingredient weighing. Runs ~30km/week, walks ~25km/week. Mediterranean/Cypriot diet."
 };
 const MODES = [
-  {id:"fat_loss",    emoji:"🔥",name:"Fat Loss",    desc:"500 kcal deficit, high protein",  macros:{protein:160,carbs:180,fat:65}},
-  {id:"testosterone",emoji:"💪",name:"Testosterone",desc:"Zinc, D3, healthy fats, sleep",   macros:{protein:150,carbs:200,fat:80}},
-  {id:"abs",         emoji:"🎯",name:"Core & Abs",  desc:"Deficit + core focus",             macros:{protein:165,carbs:160,fat:60}},
-  {id:"energy",      emoji:"⚡",name:"Energy",      desc:"Carb timing, sleep, hydration",    macros:{protein:140,carbs:220,fat:70}},
-  {id:"endurance",   emoji:"🏃",name:"Endurance",   desc:"Carb fuelling, recovery",          macros:{protein:145,carbs:240,fat:65}},
-  {id:"maintain",    emoji:"⚖️",name:"Maintain",    desc:"TDEE balance",                     macros:{protein:140,carbs:200,fat:70}},
+  // ── Body composition ──
+  {id:"fat_loss",      emoji:"🔥", name:"Fat Loss",           category:"Body",      desc:"500 kcal deficit · high protein · preserve muscle",        macros:{protein:160,carbs:180,fat:65}},
+  {id:"muscle",        emoji:"💪", name:"Muscle Development", category:"Body",      desc:"Slight surplus · heavy compound lifts · high protein",      macros:{protein:175,carbs:240,fat:75}},
+  {id:"maintain",      emoji:"⚖️", name:"Maintain",           category:"Body",      desc:"TDEE balance · nutritional variety · consistency",          macros:{protein:140,carbs:210,fat:70}},
+  // ── Running ──
+  {id:"run_endurance", emoji:"🏃", name:"Run Endurance",      category:"Running",   desc:"Carb fuelling · long run recovery · aerobic base",          macros:{protein:145,carbs:250,fat:60}},
+  {id:"run_speed",     emoji:"⚡", name:"Speed Development",  category:"Running",   desc:"Interval nutrition · carb timing · fast-twitch focus",      macros:{protein:150,carbs:230,fat:60}},
+  {id:"race_prep",     emoji:"🏅", name:"Race Preparation",   category:"Running",   desc:"Periodised nutrition · taper · race-day carb strategy",     macros:{protein:145,carbs:260,fat:55}},
+  // ── Cross-sport ──
+  {id:"tennis",        emoji:"🎾", name:"Tennis Performance", category:"Sport",     desc:"Explosive energy · hydration · court agility focus",        macros:{protein:150,carbs:220,fat:65}},
+  {id:"swimming",      emoji:"🏊", name:"Open Water Swim",    category:"Sport",     desc:"Endurance fuelling · cold adaptation · stroke efficiency",   macros:{protein:148,carbs:235,fat:65}},
+  {id:"cycling",       emoji:"🚴", name:"Cycling Development",category:"Sport",     desc:"FTP gains · carb loading · saddle time adaptation",         macros:{protein:145,carbs:255,fat:60}},
+  // ── Strength & structure ──
+  {id:"abs",           emoji:"🎯", name:"Core & Abs",         category:"Strength",  desc:"Deficit + daily core work · functional strength",           macros:{protein:165,carbs:160,fat:60}},
+  {id:"chest_upper",   emoji:"🏋️", name:"Upper Body & Chest", category:"Strength",  desc:"Push/pull split · progressive overload · protein priority",  macros:{protein:170,carbs:200,fat:70}},
+  // ── Hormones & health ──
+  {id:"testosterone",  emoji:"🧬", name:"Hormone Health",     category:"Health",    desc:"Testosterone & vitality · zinc · D3 · healthy fats · sleep", macros:{protein:150,carbs:200,fat:85}},
+  {id:"energy_focus",  emoji:"☀️", name:"Energy & Vitality",  category:"Health",    desc:"Fatigue recovery · carb timing · sleep quality · HRV",      macros:{protein:140,carbs:230,fat:70}},
+  // ── Recovery ──
+  {id:"rest",          emoji:"😴", name:"Rest & Recovery",    category:"Recovery",  desc:"Easy week · maintenance calories · sleep & mobility focus",  macros:{protein:135,carbs:200,fat:70}},
 ];
 const QUICK_ACTS = [
   {emoji:"🏃",name:"Run",met:9.8},{emoji:"🚶",name:"Walk",met:3.5},{emoji:"🚴",name:"Cycle",met:7.5},
@@ -353,6 +367,25 @@ function switchTab(tab) {
   checkStravaCallback();
 render();
 if(stravaConnected()) syncStrava();
+
+// Auto-sync when app becomes visible (return from background)
+document.addEventListener("visibilitychange", () => {
+  if(document.visibilityState === "visible" && stravaConnected()) {
+    syncStrava(true);
+  }
+});
+
+// Pull-to-refresh on Activity tab
+let touchStartY = 0;
+document.getElementById("content").addEventListener("touchstart", e => {
+  touchStartY = e.touches[0].clientY;
+}, {passive:true});
+document.getElementById("content").addEventListener("touchend", e => {
+  const delta = e.changedTouches[0].clientY - touchStartY;
+  if(delta > 80 && document.getElementById("content").scrollTop === 0 && currentTab === "activity") {
+    syncStrava(true);
+  }
+}, {passive:true});
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
@@ -360,6 +393,10 @@ function render() {
   const mode=currentMode();
   document.getElementById("modeEmoji").textContent=mode.emoji;
   document.getElementById("modeName").textContent=mode.name;
+  // Update pill color to match mode category
+  const pillColors={Body:"#f97316",Running:"#22d3a0",Sport:"#38bdf8",Strength:"#818cf8",Health:"#a78bfa",Recovery:"#6b84a8"};
+  const pill=document.querySelector(".mode-pill");
+  if(pill) pill.style.color=pillColors[mode.category]||"var(--purple2)";
   const el=document.getElementById("content");
   if(currentTab==="today")     el.innerHTML=renderToday();
   if(currentTab==="activity")  el.innerHTML=renderActivity();
@@ -809,7 +846,24 @@ function openLogModal(type="food") {
 
 function openModal(id) {
   if(id==="actModal"){document.getElementById("actName").value="";document.getElementById("actDur").value="";document.getElementById("actDist").value="";document.getElementById("actCal").value="";document.getElementById("actErr").style.display="none";selEmoji="💪";selMET=5;document.getElementById("actName").dataset.met="5";document.getElementById("quickActs").innerHTML=QUICK_ACTS.map(a=>`<button class="quick-act" onclick="pickAct('${a.name}','${a.emoji}',${a.met})"><span class="quick-act-e">${a.emoji}</span><span class="quick-act-l">${a.name}</span></button>`).join("");}
-  if(id==="modeModal"){document.getElementById("modeGrid").innerHTML=MODES.map(m=>`<button class="mode-card ${db.mode===m.id?"active":""}" onclick="setMode('${m.id}')"><span class="mode-emoji">${m.emoji}</span><div class="mode-name">${m.name}</div><div class="mode-desc">${m.desc}</div></button>`).join("");}
+  if(id==="modeModal"){
+    const cats=[...new Set(MODES.map(m=>m.category))];
+    document.getElementById("modeGrid").innerHTML=cats.map(cat=>{
+      const catModes=MODES.filter(m=>m.category===cat);
+      return `<div style="margin-bottom:16px">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--subtle);margin-bottom:8px;padding:0 2px">${cat}</div>
+        ${catModes.map(m=>`
+          <button onclick="setMode('${m.id}')" style="width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;background:${db.mode===m.id?"rgba(124,111,247,.15)":"var(--surface2)"};border:1px solid ${db.mode===m.id?"var(--purple)":"var(--border)"};border-radius:12px;margin-bottom:6px;cursor:pointer;text-align:left;transition:all .15s">
+            <span style="font-size:22px;flex-shrink:0">${m.emoji}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:700;color:${db.mode===m.id?"var(--purple2)":"var(--bright)"}">${m.name}</div>
+              <div style="font-size:11px;color:var(--subtle);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.desc}</div>
+            </div>
+            ${db.mode===m.id?`<span style="color:var(--purple);font-size:16px">✓</span>`:""}
+          </button>`).join("")}
+      </div>`;
+    }).join("");
+  }
   document.getElementById(id).style.display="flex";
 }
 function closeModal(id){document.getElementById(id).style.display="none";}
@@ -1080,6 +1134,25 @@ async function checkStravaCallback(){
 checkStravaCallback();
 render();
 if(stravaConnected()) syncStrava();
+
+// Auto-sync when app becomes visible (return from background)
+document.addEventListener("visibilitychange", () => {
+  if(document.visibilityState === "visible" && stravaConnected()) {
+    syncStrava(true);
+  }
+});
+
+// Pull-to-refresh on Activity tab
+let touchStartY = 0;
+document.getElementById("content").addEventListener("touchstart", e => {
+  touchStartY = e.touches[0].clientY;
+}, {passive:true});
+document.getElementById("content").addEventListener("touchend", e => {
+  const delta = e.changedTouches[0].clientY - touchStartY;
+  if(delta > 80 && document.getElementById("content").scrollTop === 0 && currentTab === "activity") {
+    syncStrava(true);
+  }
+}, {passive:true});
 
 </script>
 </body>
