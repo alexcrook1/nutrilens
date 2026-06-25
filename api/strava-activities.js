@@ -10,28 +10,44 @@ module.exports = async function handler(req, res) {
     const after  = Math.floor(new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0).getTime() / 1000);
     const before = Math.floor(new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59).getTime() / 1000);
 
-    const response = await fetch(
+    const headers = { "Authorization": `Bearer ${access_token}` };
+
+    // Step 1: Get activity list
+    const listRes = await fetch(
       `https://www.strava.com/api/v3/athlete/activities?after=${after}&before=${before}&per_page=20`,
-      { headers: { "Authorization": `Bearer ${access_token}` } }
+      { headers }
     );
-    if (!response.ok) return res.status(response.status).json({ error: "Strava API error", activities: [] });
+    if (!listRes.ok) return res.status(listRes.status).json({ error: "Strava list error", activities: [] });
+    const list = await listRes.json();
 
-    const acts = await response.json();
+    // MET fallback values
+    const MET = { Run:9.8, VirtualRun:9.8, Walk:3.5, Hike:5.3, Ride:7.5,
+                  VirtualRide:7.5, Swim:8.0, Workout:5.0, WeightTraining:5.0,
+                  Yoga:2.5, default:5.0 };
+    const WEIGHT_KG = 77.5;
 
-    // MET values for calorie estimation when Strava doesn't provide them
-    const MET = { Run:9.8, VirtualRun:9.8, Walk:3.5, Hike:5.3, Ride:7.5, VirtualRide:7.5,
-                  Swim:8.0, Workout:5.0, WeightTraining:5.0, Yoga:2.5, default:5.0 };
-    const WEIGHT_KG = 77.5; // Alex's weight
-
-    const activities = acts.map(a => {
-      // Use Strava calories if available and non-zero
+    // Step 2: Fetch detailed data for each activity to get calories
+    const activities = await Promise.all(list.map(async (a) => {
       let calories = a.calories || 0;
 
-      // Otherwise estimate from MET * weight * time
+      // If no calories in list, fetch detailed activity
+      if (!calories) {
+        try {
+          const detailRes = await fetch(
+            `https://www.strava.com/api/v3/activities/${a.id}`,
+            { headers }
+          );
+          if (detailRes.ok) {
+            const detail = await detailRes.json();
+            calories = detail.calories || 0;
+          }
+        } catch(e) { /* fall through to MET estimate */ }
+      }
+
+      // Final fallback: MET estimate
       if (!calories && a.moving_time) {
         const met = MET[a.sport_type] || MET[a.type] || MET.default;
-        const minutes = a.moving_time / 60;
-        calories = Math.round((met * WEIGHT_KG * 3.5 / 200) * minutes);
+        calories = Math.round((met * WEIGHT_KG * 3.5 / 200) * (a.moving_time / 60));
       }
 
       return {
@@ -41,10 +57,9 @@ module.exports = async function handler(req, res) {
         distance_m: a.distance || 0,
         moving_time_s: a.moving_time || 0,
         calories,
-        calories_estimated: !a.calories,
         elevation_m: a.total_elevation_gain || 0,
       };
-    });
+    }));
 
     return res.status(200).json({ activities });
   } catch(err) {
