@@ -1069,14 +1069,46 @@ function setMode(id){db.mode=id;save();render();}
 async function getInsight(){
   const t=today(), logs=dayLogs(t), acts=[...(db.activities[t]||[]),...(db.stravaCache[t]||[])];
   const ci=db.checkins[t]||{}, mode=currentMode(), mt=currentMode().macros;
+
+  // Compute exact figures that match what the app displays
+  const totalCalsEaten = eaten(t);
+  const totalActBurn = actBurn(t);
+  const todayTDEE = tdee(t);
+  const todayTarget = target(t);
+  const balance = totalCalsEaten - todayTarget;
+  const todayProtein = macroSum(t,"protein");
+  const todayCarbs = macroSum(t,"carbs");
+  const todayFat = macroSum(t,"fat");
+  const todayHydro = totalHydro(t);
+  const todayCaff = totalCaffeine(t);
+
   const days7=[...Array(7)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()-i);return d.toISOString().slice(0,10);});
-  const weekSummary=days7.map(d=>`${d}: ${foodCals(d)} kcal food, ${totalHydro(d)}ml hydration, ${actBurn(d)} burned, energy ${(db.checkins[d]||{}).energy||"?"}`).join("\n");
+  const weekSummary=days7.map(d=>`${d}: ${eaten(d)} kcal eaten, ${actBurn(d)} burned, target ${target(d)}, energy ${(db.checkins[d]||{}).energy||"?"}/5`).join("\n");
+
   const prompt=`Smart personal health coach for Alex (33yr male, ${db.profile.weight}kg, ${db.profile.height}cm, Cyprus).
-Goal: ${mode.name}. Targets: protein ${mt.protein}g carbs ${mt.carbs}g fat ${mt.fat}g, hydration 2500ml.
+Goal: ${mode.name}. Daily targets: ${todayTarget} kcal, protein ${mt.protein}g, carbs ${mt.carbs}g, fat ${mt.fat}g, hydration 2500ml.
 Context: ${PROFILE.context}
-Today: food=${logs.filter(l=>l.type==="food").map(l=>l.name+"("+l.calories+"kcal)").join(",")||"none"}, drinks=${logs.filter(l=>l.type!=="food").map(l=>l.name).join(",")||"none"}, hydration=${totalHydro(t)}ml, caffeine=${totalCaffeine(t)}mg, activity=${acts.map(a=>a.name).join(",")||"none"}, sleep=${ci.sleep_hrs||"?"}h energy=${ci.energy||"?"}/5
-Last 7 days:\n${weekSummary}
-ONE specific actionable insight for today. Direct and practical. Max 2 sentences.`;
+
+TODAY'S EXACT DATA (use these numbers, do not estimate):
+- Total calories eaten: ${totalCalsEaten} kcal (food + drinks combined)
+- Activity burned: ${totalActBurn} kcal
+- TDEE: ${todayTDEE} kcal
+- Calorie target: ${todayTarget} kcal
+- Balance: ${balance>0?"+"+balance+" kcal surplus":Math.abs(balance)+" kcal deficit"}
+- Protein: ${Math.round(todayProtein)}g of ${mt.protein}g target
+- Carbs: ${Math.round(todayCarbs)}g of ${mt.carbs}g target
+- Fat: ${Math.round(todayFat)}g of ${mt.fat}g target
+- Hydration: ${todayHydro}ml of 2500ml target
+- Caffeine: ${todayCaff}mg
+- Activities: ${acts.map(a=>a.name+(a.moving_time_s?" "+Math.round(a.moving_time_s/60)+"min":a.duration?" "+a.duration+"min":"")).join(", ")||"none"}
+- Sleep: ${ci.sleep_hrs||"?"}h · quality ${ci.sleep_q||"?"}/5 · energy ${ci.energy||"?"}/5
+- Meals logged: ${logs.filter(l=>l.type==="food").map(l=>l.name).join(", ")||"none"}
+- Drinks logged: ${logs.filter(l=>l.type!=="food").map(l=>l.name).join(", ")||"none"}
+
+Last 7 days:
+${weekSummary}
+
+Give ONE specific, actionable, personalised insight based on the EXACT data above. Be precise — reference the actual numbers shown. Direct and practical. Max 2 sentences. No markdown formatting.`;
   try{
     const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:150,messages:[{role:"user",content:prompt}]})});
     const d=await r.json();
