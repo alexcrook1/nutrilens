@@ -569,6 +569,23 @@ function renderActivity() {
   }
   html+=`</div>`;
 
+  // Activity suggestions card
+  const todayBal = eaten(today()) - target(today());
+  html+=`<div class="card" id="actSuggestCard">
+    <div class="row mb12">
+      <div class="card-title f1" style="margin:0">
+        ${todayBal>0?"🔥 Burn it off":"💪 Suggested activities"}
+      </div>
+      <button class="btn btn-sm btn-secondary" onclick="getActivitySuggestions()" id="actSuggestBtn">Suggest</button>
+    </div>
+    ${todayBal>0
+      ?`<div class="xs c-subtle mb8">You're <span style="color:var(--red);font-weight:600">${todayBal} kcal</span> over target today — here are some ways to close the gap</div>`
+      :`<div class="xs c-subtle mb8">Activities suited to your <span style="color:var(--purple2);font-weight:600">${currentMode().name}</span> focus today</div>`}
+    <div id="actSuggestions">
+      <div class="empty c-subtle" style="padding:10px 0">Tap Suggest for personalised activity ideas</div>
+    </div>
+  </div>`;
+
   html+=`<div class="card">
     <div class="card-title">This week</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
@@ -634,6 +651,18 @@ function renderNutrition() {
       <div class="card-title f1" style="margin:0">${mode.emoji} ${mode.name} — tips</div>
     </div>
     ${(tips[db.mode]||tips.fat_loss).map(t=>`<div class="stat-row xs"><span>${t}</span></div>`).join("")}
+  </div>`;
+
+  // Meal suggestions card
+  html+=`<div class="card">
+    <div class="row mb12">
+      <div class="card-title f1" style="margin:0">🍽 Meal suggestions</div>
+      <button class="btn btn-sm btn-secondary" onclick="getMealSuggestions()" id="mealSuggestBtn">Suggest</button>
+    </div>
+    <div class="xs c-subtle mb8">Based on your macros, today's log and <span style="color:var(--purple2);font-weight:600">${mode.name}</span> focus</div>
+    <div id="mealSuggestions">
+      <div class="empty c-subtle" style="padding:10px 0">Tap Suggest for personalised meal ideas</div>
+    </div>
   </div>`;
 
   return html;
@@ -1080,6 +1109,110 @@ Give a brief, specific, actionable weekly micronutrient summary. Flag any defici
 }
 
 function showErr(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display="block";}
+
+// ── Activity Suggestions ───────────────────────────────────────────────────────
+async function getActivitySuggestions() {
+  const btn=document.getElementById("actSuggestBtn");
+  const container=document.getElementById("actSuggestions");
+  if(!btn||!container) return;
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>';
+  container.innerHTML='<div class="xs c-subtle" style="padding:8px 0">Getting suggestions…</div>';
+
+  const t=today(), bal=eaten(t)-target(t), mode=currentMode();
+  const acts=(db.activities[t]||[]).concat(db.stravaCache[t]||[]);
+  const prompt=`Personal trainer for Alex (33yr male, ${db.profile.weight}kg, Cyprus, hot climate).
+Current mode: ${mode.name}. Today's calorie balance: ${bal>0?"+"+bal+" kcal surplus":Math.abs(bal)+" kcal deficit"}.
+Activities already done today: ${acts.map(a=>a.name+(a.moving_time_s?" "+Math.round(a.moving_time_s/60)+"min":a.duration?" "+a.duration+"min":"")).join(", ")||"none"}.
+Sports: running (main), tennis, open water swimming, cycling (developing). Has gym access.
+Time windows: early morning (before 8am) or afternoon (after 2pm). Hot climate — favour early morning or evening for outdoor.
+Suggest 5 varied activities. ${bal>0?"Focus on burning the "+bal+" kcal surplus efficiently.":"Mix of activities suited to "+mode.name+" training focus."}
+Reply ONLY valid JSON array, no markdown:
+[{"activity":"name","duration":number,"calories":number,"emoji":"emoji","timing":"e.g. Early morning run","reason":"one sentence why this fits today"}]`;
+
+  try {
+    const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:600,messages:[{role:"user",content:prompt}]})});
+    const d=await r.json();
+    const text=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+    const start=text.indexOf("["),end=text.lastIndexOf("]");
+    const suggestions=JSON.parse(text.slice(start,end+1));
+    container.innerHTML=suggestions.map((s,i)=>`
+      <div style="display:flex;gap:10px;padding:10px 0;border-bottom:${i<suggestions.length-1?"1px solid var(--border)":"none"}">
+        <div style="font-size:26px;line-height:1;width:36px;text-align:center;flex-shrink:0">${s.emoji}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--bright)">${s.activity}</div>
+          <div style="font-size:11px;color:var(--subtle);margin-top:2px">${s.timing} · ${s.duration}min · ~${s.calories} kcal</div>
+          <div style="font-size:11px;color:var(--teal);margin-top:3px">${s.reason}</div>
+        </div>
+        <button onclick="logSuggestedAct('${s.activity.replace(/'/g,"")}','${s.emoji}',${s.duration},${s.calories})"
+          style="background:var(--purple);color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:600;cursor:pointer;flex-shrink:0;align-self:center">Log</button>
+      </div>`).join("");
+  } catch(e) {
+    container.innerHTML=`<div class="xs c-red">Failed: ${e.message}</div>`;
+  }
+  btn.disabled=false; btn.textContent="Refresh";
+}
+
+function logSuggestedAct(name, emoji, duration, calories) {
+  const t=today();
+  const act={id:Date.now().toString(),name,duration,calories,emoji,time:new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})};
+  if(!db.activities[t]) db.activities[t]=[];
+  db.activities[t].push(act);
+  save(); render();
+}
+
+// ── Meal Suggestions ──────────────────────────────────────────────────────────
+async function getMealSuggestions() {
+  const btn=document.getElementById("mealSuggestBtn");
+  const container=document.getElementById("mealSuggestions");
+  if(!btn||!container) return;
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>';
+  container.innerHTML='<div class="xs c-subtle" style="padding:8px 0">Getting suggestions…</div>';
+
+  const t=today(), mode=currentMode(), mt=currentMode().macros;
+  const protein=macroSum(t,"protein"), carbs=macroSum(t,"carbs"), fat=macroSum(t,"fat");
+  const calsEaten=foodCals(t), calsLeft=target(t)-calsEaten;
+  const logs=dayLogs(t).filter(l=>l.type==="food");
+
+  // Find biggest macro gaps
+  const gaps=[];
+  if(protein<mt.protein*0.7) gaps.push(`protein (need ${mt.protein-Math.round(protein)}g more)`);
+  if(carbs<mt.carbs*0.6) gaps.push(`carbs (need ${mt.carbs-Math.round(carbs)}g more)`);
+  if(fat<mt.fat*0.6) gaps.push(`healthy fats (need ${mt.fat-Math.round(fat)}g more)`);
+
+  const prompt=`Nutrition expert specialising in Mediterranean and Cypriot cuisine.
+Alex: 33yr male, ${db.profile.weight}kg, Cyprus. ${mode.name} focus.
+Macro targets: protein ${mt.protein}g, carbs ${mt.carbs}g, fat ${mt.fat}g.
+Already eaten today: protein ${Math.round(protein)}g, carbs ${Math.round(carbs)}g, fat ${Math.round(fat)}g, ${calsEaten} kcal.
+Calories remaining today: ${Math.round(calsLeft)} kcal.
+Macro gaps: ${gaps.length?gaps.join(", "):"on track — suggest maintenance meals"}.
+Meals already logged: ${logs.map(l=>l.name).join(", ")||"none yet"}.
+Eating times: 11am, 2:30pm, 5pm. Family meals, no ingredient weighing, Mediterranean diet.
+Suggest 5 specific meal or snack ideas that fill the gaps. Use real Cypriot/Mediterranean ingredients where possible (halloumi, souvlaki, tzatziki, hummus, village salad etc).
+Reply ONLY valid JSON array, no markdown:
+[{"meal":"meal name","calories":number,"protein":number,"carbs":number,"fat":number,"emoji":"emoji","why":"one sentence on what gap it fills","timing":"e.g. Perfect for 2:30pm snack"}]`;
+
+  try {
+    const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:700,messages:[{role:"user",content:prompt}]})});
+    const d=await r.json();
+    const text=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+    const start=text.indexOf("["),end=text.lastIndexOf("]");
+    const suggestions=JSON.parse(text.slice(start,end+1));
+    container.innerHTML=suggestions.map((s,i)=>`
+      <div style="display:flex;gap:10px;padding:10px 0;border-bottom:${i<suggestions.length-1?"1px solid var(--border)":"none"}">
+        <div style="font-size:26px;line-height:1;width:36px;text-align:center;flex-shrink:0">${s.emoji}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--bright)">${s.meal}</div>
+          <div style="font-size:11px;color:var(--subtle);margin-top:2px">${s.timing} · ${s.calories} kcal · P:${s.protein}g C:${s.carbs}g F:${s.fat}g</div>
+          <div style="font-size:11px;color:var(--teal);margin-top:3px">${s.why}</div>
+        </div>
+      </div>`).join("");
+  } catch(e) {
+    container.innerHTML=`<div class="xs c-red">Failed: ${e.message}</div>`;
+  }
+  btn.disabled=false; btn.textContent="Refresh";
+}
 
 
 // ── Strava OAuth ────────────────────────────────────────────────────────────────────────
