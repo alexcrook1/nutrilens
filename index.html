@@ -262,31 +262,152 @@ select.input{appearance:none}
 <!-- PROGRESS PHOTO MODAL -->
 <div class="backdrop" id="progressModal" style="display:none">
   <div class="modal">
-    <div class="modal-hdr"><div class="modal-title">📸 Progress photo</div><button class="modal-close" onclick="closeModal('progressModal')">×</button></div>
-    <div class="xs c-subtle mb12">Monthly check-in — AI compares to your previous photos and tracks visible changes in body composition.</div>
-    <div class="mb12">
-      <label class="label">Photo <span class="xs c-subtle">— front or side, consistent lighting helps</span></label>
-      <div class="row">
-        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('progressPhotoIn').click()">📷 Take photo</button>
-        <img id="progressPhotoPrev" class="photo-prev" style="display:none">
+    <div class="modal-hdr">
+      <div class="modal-title">📸 Progress photo</div>
+      <button class="modal-close" onclick="closeModal('progressModal')">×</button>
+    </div>
+
+    <!-- Step indicator -->
+    <div style="display:flex;gap:0;margin-bottom:16px;border-radius:10px;overflow:hidden;background:var(--border)">
+      <div id="step1tab" style="flex:1;text-align:center;padding:8px;font-size:11px;font-weight:700;background:var(--purple);color:#fff;transition:all .2s">1 · Guide</div>
+      <div id="step2tab" style="flex:1;text-align:center;padding:8px;font-size:11px;font-weight:600;color:var(--subtle);transition:all .2s">2 · Photo</div>
+      <div id="step3tab" style="flex:1;text-align:center;padding:8px;font-size:11px;font-weight:600;color:var(--subtle);transition:all .2s">3 · Analyse</div>
+    </div>
+
+    <!-- STEP 1: Guide -->
+    <div id="progressStep1">
+      <div style="font-size:13px;font-weight:700;color:var(--bright);margin-bottom:10px">Position guide</div>
+      <div style="font-size:12px;color:var(--secondary);margin-bottom:12px">Follow these exactly every month for meaningful comparisons</div>
+
+      <!-- Silhouette guide -->
+      <div style="background:var(--surface2);border-radius:14px;padding:16px;margin-bottom:14px;position:relative">
+        <div style="display:flex;gap:16px;justify-content:center;margin-bottom:12px">
+          <!-- Front silhouette -->
+          <div style="text-align:center">
+            <svg width="80" height="160" viewBox="0 0 80 160" style="display:block;margin:0 auto">
+              <!-- Guide lines -->
+              <line x1="0" y1="30" x2="80" y2="30" stroke="#1a2540" stroke-width="1" stroke-dasharray="4,3"/>
+              <line x1="0" y1="72" x2="80" y2="72" stroke="#1a2540" stroke-width="1" stroke-dasharray="4,3"/>
+              <line x1="0" y1="100" x2="80" y2="100" stroke="#1a2540" stroke-width="1" stroke-dasharray="4,3"/>
+              <line x1="0" y1="135" x2="80" y2="135" stroke="#1a2540" stroke-width="1" stroke-dasharray="4,3"/>
+              <!-- Head -->
+              <circle cx="40" cy="15" r="13" fill="none" stroke="#7c6ff7" stroke-width="2"/>
+              <!-- Neck -->
+              <rect x="35" y="27" width="10" height="8" rx="2" fill="none" stroke="#7c6ff7" stroke-width="2"/>
+              <!-- Torso -->
+              <path d="M20 35 L16 70 L22 100 L58 100 L64 70 L60 35 Z" fill="none" stroke="#7c6ff7" stroke-width="2"/>
+              <!-- Arms -->
+              <path d="M20 36 L10 68 L14 70" fill="none" stroke="#7c6ff7" stroke-width="2" stroke-linecap="round"/>
+              <path d="M60 36 L70 68 L66 70" fill="none" stroke="#7c6ff7" stroke-width="2" stroke-linecap="round"/>
+              <!-- Legs -->
+              <path d="M30 100 L26 135 L30 158" fill="none" stroke="#7c6ff7" stroke-width="2" stroke-linecap="round"/>
+              <path d="M50 100 L54 135 L50 158" fill="none" stroke="#7c6ff7" stroke-width="2" stroke-linecap="round"/>
+              <!-- Labels -->
+              <text x="40" y="29" font-size="7" fill="#3d5070" text-anchor="middle">shoulders</text>
+              <text x="40" y="71" font-size="7" fill="#3d5070" text-anchor="middle">waist</text>
+              <text x="40" y="99" font-size="7" fill="#3d5070" text-anchor="middle">hips</text>
+            </svg>
+            <div style="font-size:10px;color:var(--subtle);margin-top:4px;font-weight:600">FRONT</div>
+          </div>
+          <!-- Side silhouette -->
+          <div style="text-align:center">
+            <svg width="80" height="160" viewBox="0 0 80 160" style="display:block;margin:0 auto">
+              <line x1="0" y1="30" x2="80" y2="30" stroke="#1a2540" stroke-width="1" stroke-dasharray="4,3"/>
+              <line x1="0" y1="72" x2="80" y2="72" stroke="#1a2540" stroke-width="1" stroke-dasharray="4,3"/>
+              <line x1="0" y1="100" x2="80" y2="100" stroke="#1a2540" stroke-width="1" stroke-dasharray="4,3"/>
+              <!-- Head -->
+              <circle cx="42" cy="15" r="13" fill="none" stroke="#2dd4bf" stroke-width="2"/>
+              <!-- Neck -->
+              <rect x="39" y="27" width="8" height="8" rx="2" fill="none" stroke="#2dd4bf" stroke-width="2"/>
+              <!-- Torso side view -->
+              <path d="M32 35 Q28 52 30 70 Q30 85 34 100 L52 100 Q54 85 50 70 Q48 52 48 35 Z" fill="none" stroke="#2dd4bf" stroke-width="2"/>
+              <!-- Arm side -->
+              <path d="M32 38 L24 68" fill="none" stroke="#2dd4bf" stroke-width="2" stroke-linecap="round"/>
+              <!-- Legs side -->
+              <path d="M36 100 L34 135 L36 158" fill="none" stroke="#2dd4bf" stroke-width="2" stroke-linecap="round"/>
+              <path d="M48 100 L50 135 L48 158" fill="none" stroke="#2dd4bf" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <div style="font-size:10px;color:var(--subtle);margin-top:4px;font-weight:600">SIDE</div>
+          </div>
+        </div>
+
+        <!-- Checklist -->
+        <div style="border-top:1px solid var(--border);padding-top:12px">
+          ${[
+            ["📍","Stand 2-3 metres from camera","Full body in frame"],
+            ["💡","Same lighting every month","Window light or overhead"],
+            ["⏰","Morning, after bathroom","Before eating or drinking"],
+            ["👕","Minimal clothing","Shorts/underwear — consistent"],
+            ["📐","Feet shoulder-width apart","Arms relaxed at sides"],
+            ["📸","Take front AND side","Rotate 90° for second shot"],
+          ].map(([e,t,s])=>`<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:8px">
+            <span style="font-size:16px;flex-shrink:0">${e}</span>
+            <div><div style="font-size:12px;font-weight:600;color:var(--text)">${t}</div><div style="font-size:11px;color:var(--subtle)">${s}</div></div>
+          </div>`).join("")}
+        </div>
       </div>
+      <button class="btn btn-primary btn-full" onclick="progressGoStep(2)">Ready — take photo →</button>
+    </div>
+
+    <!-- STEP 2: Photo capture -->
+    <div id="progressStep2" style="display:none">
+      <div style="font-size:13px;font-weight:700;color:var(--bright);margin-bottom:10px">Take your photo</div>
+
+      <!-- Camera overlay guide -->
+      <div style="position:relative;background:#000;border-radius:14px;overflow:hidden;margin-bottom:14px;aspect-ratio:3/4">
+        <img id="progressPhotoPrev" style="width:100%;height:100%;object-fit:cover;display:none;position:absolute;inset:0">
+        <!-- Overlay when no photo -->
+        <div id="progressCameraGuide" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+          <svg width="120" height="200" viewBox="0 0 120 200" opacity="0.35">
+            <circle cx="60" cy="22" r="18" fill="none" stroke="#7c6ff7" stroke-width="2"/>
+            <rect x="50" y="39" width="20" height="12" rx="3" fill="none" stroke="#7c6ff7" stroke-width="2"/>
+            <path d="M28 52 L22 100 L32 145 L88 145 L98 100 L92 52 Z" fill="none" stroke="#7c6ff7" stroke-width="2"/>
+            <path d="M28 54 L14 100 L20 102" fill="none" stroke="#7c6ff7" stroke-width="2" stroke-linecap="round"/>
+            <path d="M92 54 L106 100 L100 102" fill="none" stroke="#7c6ff7" stroke-width="2" stroke-linecap="round"/>
+            <path d="M44 145 L40 195" fill="none" stroke="#7c6ff7" stroke-width="2" stroke-linecap="round"/>
+            <path d="M76 145 L80 195" fill="none" stroke="#7c6ff7" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <div style="color:#7c6ff7;font-size:12px;font-weight:600;margin-top:8px">Align your body here</div>
+          <div style="color:#3d5070;font-size:11px;margin-top:4px">Tap below to open camera</div>
+        </div>
+        <!-- Corner guides always visible -->
+        <div style="position:absolute;top:12px;left:12px;width:24px;height:24px;border-top:3px solid #7c6ff7;border-left:3px solid #7c6ff7;border-radius:3px 0 0 0"></div>
+        <div style="position:absolute;top:12px;right:12px;width:24px;height:24px;border-top:3px solid #7c6ff7;border-right:3px solid #7c6ff7;border-radius:0 3px 0 0"></div>
+        <div style="position:absolute;bottom:12px;left:12px;width:24px;height:24px;border-bottom:3px solid #7c6ff7;border-left:3px solid #7c6ff7;border-radius:0 0 0 3px"></div>
+        <div style="position:absolute;bottom:12px;right:12px;width:24px;height:24px;border-bottom:3px solid #7c6ff7;border-right:3px solid #7c6ff7;border-radius:0 0 3px 0"></div>
+      </div>
+
       <input type="file" id="progressPhotoIn" accept="image/*" capture="environment" style="display:none" onchange="handleProgressPhoto(this)">
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button class="btn btn-secondary f1" onclick="progressGoStep(1)">← Back</button>
+        <button class="btn btn-primary" style="flex:2" onclick="document.getElementById('progressPhotoIn').click()">📷 Open camera</button>
+      </div>
+      <div class="mb12">
+        <label class="label">Note <span class="xs c-subtle">optional</span></label>
+        <input class="input" id="progressNote" placeholder="e.g. Week 4 of fat loss phase, feeling leaner…">
+      </div>
+      <button class="btn btn-primary btn-full" id="progressNextBtn" onclick="progressGoStep(3)" disabled style="opacity:.5">Continue to analysis →</button>
     </div>
-    <div class="mb12">
-      <label class="label">Note <span class="xs c-subtle">optional</span></label>
-      <input class="input" id="progressNote" placeholder="e.g. After 4 weeks of fat loss phase…">
-    </div>
-    <div id="progressResult" style="display:none">
-      <div style="background:var(--muted);border-radius:14px;padding:14px;margin-bottom:14px">
-        <div class="insight-label mb8">AI Analysis</div>
-        <div class="xs" style="color:var(--text);line-height:1.8" id="progressAnalysisText"></div>
+
+    <!-- STEP 3: Analyse & save -->
+    <div id="progressStep3" style="display:none">
+      <div id="progressResult" style="display:none;margin-bottom:14px">
+        <div style="background:var(--muted);border-radius:14px;padding:14px">
+          <div class="insight-label mb8">AI Analysis</div>
+          <div style="font-size:13px;color:var(--text);line-height:1.7" id="progressAnalysisText"></div>
+        </div>
+      </div>
+      <div id="progressErr" class="err" style="display:none"></div>
+      <div id="progressPreviewThumb" style="margin-bottom:14px;text-align:center;display:none">
+        <img id="progressThumb" style="height:120px;border-radius:10px;object-fit:cover">
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary f1" onclick="progressGoStep(2)">← Retake</button>
+        <button class="btn btn-secondary f1" onclick="analyseProgressPhoto()" id="progressAnalyseBtn">🧠 Analyse</button>
+        <button class="btn btn-primary f1" onclick="saveProgressPhoto()" id="progressSaveBtn">Save</button>
       </div>
     </div>
-    <div id="progressErr" class="err" style="display:none"></div>
-    <div style="display:flex;gap:8px">
-      <button class="btn btn-secondary f1" onclick="analyseProgressPhoto()" id="progressAnalyseBtn">Analyse with AI</button>
-      <button class="btn btn-primary f1" onclick="saveProgressPhoto()" id="progressSaveBtn" style="display:none">Save photo</button>
-    </div>
+
   </div>
 </div>
 
@@ -950,6 +1071,17 @@ function openModal(id) {
       </div>`;
     }).join("");
   }
+  if(id==="progressModal"){ progressPhotoData=null; progressGoStep(1);
+    document.getElementById("progressNote").value="";
+    document.getElementById("progressResult").style.display="none";
+    document.getElementById("progressErr").style.display="none";
+    const guide=document.getElementById("progressCameraGuide");
+    if(guide) guide.style.display="flex";
+    const prev=document.getElementById("progressPhotoPrev");
+    if(prev) prev.style.display="none";
+    const nextBtn=document.getElementById("progressNextBtn");
+    if(nextBtn){nextBtn.disabled=true;nextBtn.style.opacity=".5";}
+  }
   document.getElementById(id).style.display="flex";
 }
 function closeModal(id){document.getElementById(id).style.display="none";}
@@ -1218,6 +1350,17 @@ function logSavedMeal(name, calories, protein, carbs, fat, emoji) {
 // ── Progress photos ───────────────────────────────────────────────────────────
 let progressPhotoData=null;
 
+function progressGoStep(step) {
+  [1,2,3].forEach(n=>{
+    document.getElementById("progressStep"+n).style.display=n===step?"block":"none";
+    const tab=document.getElementById("step"+n+"tab");
+    if(tab){
+      tab.style.background=n===step?"var(--purple)":"transparent";
+      tab.style.color=n===step?"#fff":n<step?"var(--green)":"var(--subtle)";
+    }
+  });
+}
+
 function handleProgressPhoto(input) {
   const file=input.files[0]; if(!file) return;
   const img=new Image(), reader=new FileReader();
@@ -1230,8 +1373,14 @@ function handleProgressPhoto(input) {
       canvas.getContext("2d").drawImage(img,0,0,w,h);
       const compressed=canvas.toDataURL("image/jpeg",0.8);
       progressPhotoData={base64:compressed.split(",")[1],mime:"image/jpeg",preview:compressed};
+      // Show in camera area
       const prev=document.getElementById("progressPhotoPrev");
-      prev.src=compressed; prev.style.display="block";
+      if(prev){prev.src=compressed;prev.style.display="block";}
+      const guide=document.getElementById("progressCameraGuide");
+      if(guide) guide.style.display="none";
+      // Enable next button
+      const nextBtn=document.getElementById("progressNextBtn");
+      if(nextBtn){nextBtn.disabled=false;nextBtn.style.opacity="1";}
     };
     img.src=ev.target.result;
   };
@@ -1239,6 +1388,10 @@ function handleProgressPhoto(input) {
 }
 
 async function analyseProgressPhoto() {
+  // Show thumb in step 3
+  const thumb=document.getElementById("progressThumb");
+  const thumbWrap=document.getElementById("progressPreviewThumb");
+  if(thumb&&progressPhotoData){thumb.src=progressPhotoData.preview;thumbWrap.style.display="block";}
   if(!progressPhotoData){document.getElementById("progressErr").textContent="Add a photo first";document.getElementById("progressErr").style.display="block";return;}
   const btn=document.getElementById("progressAnalyseBtn");
   btn.disabled=true; btn.innerHTML='<span class="spin"></span>Analysing…';
