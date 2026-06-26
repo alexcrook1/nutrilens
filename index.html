@@ -259,6 +259,63 @@ select.input{appearance:none}
   </div>
 </div>
 
+<!-- PROGRESS PHOTO MODAL -->
+<div class="backdrop" id="progressModal" style="display:none">
+  <div class="modal">
+    <div class="modal-hdr"><div class="modal-title">📸 Progress photo</div><button class="modal-close" onclick="closeModal('progressModal')">×</button></div>
+    <div class="xs c-subtle mb12">Monthly check-in — AI compares to your previous photos and tracks visible changes in body composition.</div>
+    <div class="mb12">
+      <label class="label">Photo <span class="xs c-subtle">— front or side, consistent lighting helps</span></label>
+      <div class="row">
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('progressPhotoIn').click()">📷 Take photo</button>
+        <img id="progressPhotoPrev" class="photo-prev" style="display:none">
+      </div>
+      <input type="file" id="progressPhotoIn" accept="image/*" capture="environment" style="display:none" onchange="handleProgressPhoto(this)">
+    </div>
+    <div class="mb12">
+      <label class="label">Note <span class="xs c-subtle">optional</span></label>
+      <input class="input" id="progressNote" placeholder="e.g. After 4 weeks of fat loss phase…">
+    </div>
+    <div id="progressResult" style="display:none">
+      <div style="background:var(--muted);border-radius:14px;padding:14px;margin-bottom:14px">
+        <div class="insight-label mb8">AI Analysis</div>
+        <div class="xs" style="color:var(--text);line-height:1.8" id="progressAnalysisText"></div>
+      </div>
+    </div>
+    <div id="progressErr" class="err" style="display:none"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary f1" onclick="analyseProgressPhoto()" id="progressAnalyseBtn">Analyse with AI</button>
+      <button class="btn btn-primary f1" onclick="saveProgressPhoto()" id="progressSaveBtn" style="display:none">Save photo</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI TOOL MODAL -->
+<div class="backdrop" id="aiToolModal" style="display:none">
+  <div class="modal">
+    <div class="modal-hdr"><div class="modal-title" id="aiToolTitle">AI Analysis</div><button class="modal-close" onclick="closeModal('aiToolModal')">×</button></div>
+    <div class="xs c-subtle mb12" id="aiToolDesc"></div>
+    <div class="mb12">
+      <label class="label" id="aiToolPhotoLabel">Photo</label>
+      <div class="row">
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('aiToolPhotoIn').click()">📷 Add photo</button>
+        <img id="aiToolPhotoPrev" class="photo-prev" style="display:none">
+        <button class="btn btn-ghost btn-sm" id="aiToolRemovePhoto" style="display:none" onclick="clearAIToolPhoto()">Remove</button>
+      </div>
+      <input type="file" id="aiToolPhotoIn" accept="image/*" capture="environment" style="display:none" onchange="handleAIToolPhoto(this)">
+    </div>
+    <div class="mb12" id="aiToolDescWrap">
+      <label class="label" id="aiToolDescLabel">Additional context <span class="xs c-subtle">optional</span></label>
+      <textarea class="input" id="aiToolDescIn" rows="2" placeholder=""></textarea>
+    </div>
+    <div id="aiToolResult" style="display:none">
+      <div style="background:var(--muted);border-radius:14px;padding:16px;margin-bottom:14px;line-height:1.8;font-size:13px;color:var(--text)" id="aiToolResultText"></div>
+    </div>
+    <div id="aiToolErr" class="err" style="display:none"></div>
+    <button class="btn btn-primary btn-full" onclick="runAITool()" id="aiToolRunBtn">Analyse</button>
+  </div>
+</div>
+
 <!-- MODE MODAL -->
 <div class="backdrop" id="modeModal" style="display:none">
   <div class="modal">
@@ -1138,6 +1195,219 @@ Give a brief, specific, actionable weekly micronutrient summary. Flag any defici
     db.microAlerts=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
     db.microAlertsDate=today(); save(); render();
   }catch(e){alert("Micro check failed: "+e.message);}
+}
+
+// ── Saved meal quick log ─────────────────────────────────────────────────────
+function logSavedMeal(name, calories, protein, carbs, fat, emoji) {
+  const t=today();
+  const entry={
+    id:Date.now().toString(),
+    time:new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),
+    type:"food", name, calories, protein, carbs, fat,
+    notes:"From saved meals", confidence:"high", preview:null,
+    emoji
+  };
+  if(!db.logs[t]) db.logs[t]=[];
+  db.logs[t].push(entry);
+  // Update meal memory count
+  const key=name.toLowerCase().replace(/[^a-z0-9]/g,"").slice(0,30);
+  if(db.mealMemory[key]) { db.mealMemory[key].count++; db.mealMemory[key].lastSeen=t; }
+  save(); switchTab("today");
+}
+
+// ── Progress photos ───────────────────────────────────────────────────────────
+let progressPhotoData=null;
+
+function handleProgressPhoto(input) {
+  const file=input.files[0]; if(!file) return;
+  const img=new Image(), reader=new FileReader();
+  reader.onload=ev=>{
+    img.onload=()=>{
+      const MAX=1024, canvas=document.createElement("canvas");
+      let w=img.width, h=img.height;
+      if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;}}
+      canvas.width=w; canvas.height=h;
+      canvas.getContext("2d").drawImage(img,0,0,w,h);
+      const compressed=canvas.toDataURL("image/jpeg",0.8);
+      progressPhotoData={base64:compressed.split(",")[1],mime:"image/jpeg",preview:compressed};
+      const prev=document.getElementById("progressPhotoPrev");
+      prev.src=compressed; prev.style.display="block";
+    };
+    img.src=ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function analyseProgressPhoto() {
+  if(!progressPhotoData){document.getElementById("progressErr").textContent="Add a photo first";document.getElementById("progressErr").style.display="block";return;}
+  const btn=document.getElementById("progressAnalyseBtn");
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>Analysing…';
+  document.getElementById("progressErr").style.display="none";
+
+  const prevPhotos=(db.progressPhotos||[]).slice(-2);
+  const hasPrev=prevPhotos.length>0;
+  const prompt=`You are a fitness coach analysing body composition progress photos for Alex (${db.profile.age||33}yr male, current weight ${db.profile.weight}kg, goal ${db.profile.targetWeight}kg, mode: ${currentMode().name}).
+${hasPrev?`This is photo ${prevPhotos.length+1} in a series. Previous check-ins: ${prevPhotos.map(p=>p.date+(p.weight?" ("+p.weight+"kg)":"")+(p.note?" — "+p.note:"")).join(", ")}.`:"This is Alex's first progress photo."}
+Note: ${document.getElementById("progressNote").value||"no additional note"}.
+Analyse the photo objectively and constructively. Comment on: visible muscle definition, estimated body fat range, posture, any notable changes if this is a follow-up. Be specific and encouraging. Do not be vague. 3-4 sentences max.`;
+
+  try {
+    const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:300,
+        messages:[{role:"user",content:[
+          {type:"image",source:{type:"base64",media_type:progressPhotoData.mime,data:progressPhotoData.base64}},
+          {type:"text",text:prompt}
+        ]}]})});
+    const d=await r.json();
+    const text=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+    document.getElementById("progressAnalysisText").textContent=text;
+    document.getElementById("progressResult").style.display="block";
+    document.getElementById("progressSaveBtn").style.display="block";
+    btn.textContent="Re-analyse";
+    btn.disabled=false;
+  } catch(e) {
+    document.getElementById("progressErr").textContent="Analysis failed: "+e.message;
+    document.getElementById("progressErr").style.display="block";
+    btn.textContent="Analyse with AI"; btn.disabled=false;
+  }
+}
+
+function saveProgressPhoto() {
+  if(!progressPhotoData) return;
+  const entry={
+    date:today(),
+    preview:progressPhotoData.preview,
+    weight:db.profile.weight,
+    note:document.getElementById("progressNote").value||"",
+    aiAnalysis:document.getElementById("progressAnalysisText").textContent
+  };
+  if(!db.progressPhotos) db.progressPhotos=[];
+  // Replace if same date
+  db.progressPhotos=db.progressPhotos.filter(p=>p.date!==today());
+  db.progressPhotos.push(entry);
+  save(); closeModal("progressModal"); switchTab("body");
+  progressPhotoData=null;
+}
+
+function viewProgressPhoto(date) {
+  const p=(db.progressPhotos||[]).find(p=>p.date===date);
+  if(!p) return;
+  alert((p.aiAnalysis||"No AI analysis") + "\n\n" + new Date(p.date).toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"}) + (p.weight?" · "+p.weight+"kg":""));
+}
+
+// ── AI Tool modal ─────────────────────────────────────────────────────────────
+let aiToolType=null, aiToolPhotoData=null;
+
+const AI_TOOLS = {
+  runForm: {
+    title:"🏃 Running form check",
+    desc:"Upload a photo or video screenshot of yourself running. AI analyses your gait and gives specific coaching cues for efficiency and injury prevention.",
+    photoLabel:"Photo of your running form",
+    descLabel:"Any context",
+    descPlaceholder:"e.g. Taken at km 5 of a long run, feeling tired…",
+    prompt:(desc,profile)=>`Expert running coach analysing form for Alex (${profile.age||33}yr male, runs ~30km/week, Cyprus, goal: ${currentMode().name}).
+${desc?"Context: "+desc:""}
+Analyse the running form in this image. Check: foot strike pattern, cadence clues, arm swing, forward lean, head position, overstriding signs.
+Give specific, actionable coaching cues. Flag any injury risks. 4-5 sentences, practical and direct.`
+  },
+  gymForm: {
+    title:"🏋️ Exercise form check",
+    desc:"Photo of you performing any gym exercise. AI checks your technique, flags risks, and gives specific correction cues.",
+    photoLabel:"Photo of your exercise form",
+    descLabel:"What exercise and any context",
+    descPlaceholder:"e.g. Deadlift, 80kg, second set, lower back feeling tight…",
+    prompt:(desc,profile)=>`Expert strength coach analysing exercise form for Alex (${profile.age||33}yr male, ${profile.weight}kg).
+${desc?"Exercise/context: "+desc:""}
+Analyse the form in this image. Check technique, alignment, joint positions, common fault patterns.
+Give specific corrections and cues. Flag any injury risks explicitly. Be direct and practical. 4-5 sentences.`
+  },
+  supplement: {
+    title:"💊 Supplement & medicine check",
+    desc:"Photo of any supplement or medicine packaging. AI checks interactions with your diet, training and goals.",
+    photoLabel:"Photo of packaging or label",
+    descLabel:"Are you currently taking anything else?",
+    descPlaceholder:"e.g. Taking vitamin D and omega-3 already…",
+    prompt:(desc,profile)=>`Sports nutritionist and pharmacist reviewing supplements/medicines for Alex (${profile.age||33}yr male, ${profile.weight}kg, goal: ${currentMode().name}, runs 30km/week, Mediterranean diet, Cyprus).
+${desc?"Currently taking: "+desc:""}
+Analyse what's shown in this photo. Cover: what it does, whether it's beneficial for his specific goals and training load, optimal timing and dosage, any interactions with his diet or training, and whether it's worth taking. Be specific and evidence-based. 4-5 sentences.`
+  }
+};
+
+function openAITool(type) {
+  aiToolType=type; aiToolPhotoData=null;
+  const tool=AI_TOOLS[type];
+  document.getElementById("aiToolTitle").textContent=tool.title;
+  document.getElementById("aiToolDesc").textContent=tool.desc;
+  document.getElementById("aiToolPhotoLabel").textContent=tool.photoLabel;
+  document.getElementById("aiToolDescLabel").textContent=tool.descLabel;
+  document.getElementById("aiToolDescIn").placeholder=tool.descPlaceholder;
+  document.getElementById("aiToolDescIn").value="";
+  document.getElementById("aiToolPhotoPrev").style.display="none";
+  document.getElementById("aiToolRemovePhoto").style.display="none";
+  document.getElementById("aiToolPhotoIn").value="";
+  document.getElementById("aiToolResult").style.display="none";
+  document.getElementById("aiToolErr").style.display="none";
+  document.getElementById("aiToolRunBtn").textContent="Analyse";
+  document.getElementById("aiToolRunBtn").disabled=false;
+  openModal("aiToolModal");
+}
+
+function handleAIToolPhoto(input) {
+  const file=input.files[0]; if(!file) return;
+  const img=new Image(), reader=new FileReader();
+  reader.onload=ev=>{
+    img.onload=()=>{
+      const MAX=1024, canvas=document.createElement("canvas");
+      let w=img.width, h=img.height;
+      if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;}}
+      canvas.width=w; canvas.height=h;
+      canvas.getContext("2d").drawImage(img,0,0,w,h);
+      const compressed=canvas.toDataURL("image/jpeg",0.8);
+      aiToolPhotoData={base64:compressed.split(",")[1],mime:"image/jpeg",preview:compressed};
+      document.getElementById("aiToolPhotoPrev").src=compressed;
+      document.getElementById("aiToolPhotoPrev").style.display="block";
+      document.getElementById("aiToolRemovePhoto").style.display="inline-block";
+    };
+    img.src=ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearAIToolPhoto() {
+  aiToolPhotoData=null;
+  document.getElementById("aiToolPhotoPrev").style.display="none";
+  document.getElementById("aiToolRemovePhoto").style.display="none";
+  document.getElementById("aiToolPhotoIn").value="";
+}
+
+async function runAITool() {
+  if(!aiToolPhotoData){document.getElementById("aiToolErr").textContent="Add a photo first";document.getElementById("aiToolErr").style.display="block";return;}
+  const btn=document.getElementById("aiToolRunBtn");
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>Analysing…';
+  document.getElementById("aiToolErr").style.display="none";
+  document.getElementById("aiToolResult").style.display="none";
+
+  const tool=AI_TOOLS[aiToolType];
+  const desc=document.getElementById("aiToolDescIn").value.trim();
+  const prompt=tool.prompt(desc,db.profile);
+
+  try {
+    const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:400,
+        messages:[{role:"user",content:[
+          {type:"image",source:{type:"base64",media_type:aiToolPhotoData.mime,data:aiToolPhotoData.base64}},
+          {type:"text",text:prompt}
+        ]}]})});
+    const d=await r.json();
+    const text=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+    document.getElementById("aiToolResultText").textContent=text;
+    document.getElementById("aiToolResult").style.display="block";
+    btn.textContent="Re-analyse"; btn.disabled=false;
+  } catch(e) {
+    document.getElementById("aiToolErr").textContent="Analysis failed: "+e.message;
+    document.getElementById("aiToolErr").style.display="block";
+    btn.textContent="Analyse"; btn.disabled=false;
+  }
 }
 
 function showErr(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display="block";}
