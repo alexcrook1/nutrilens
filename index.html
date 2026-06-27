@@ -416,9 +416,13 @@ select.input{appearance:none}
 <div class="backdrop" id="aiToolModal" style="display:none">
   <div class="modal">
     <div class="modal-hdr"><div class="modal-title" id="aiToolTitle">AI Analysis</div><button class="modal-close" onclick="closeModal('aiToolModal')">×</button></div>
-    <div class="xs c-subtle mb12" id="aiToolDesc"></div>
+    <div class="xs c-subtle mb8" id="aiToolDesc"></div>
+    <div id="aiToolTips" style="display:none;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);border-radius:10px;padding:10px 12px;margin-bottom:12px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);margin-bottom:6px">📹 Tips for best results</div>
+      <div style="font-size:12px;color:var(--text);line-height:1.7" id="aiToolTipsText"></div>
+    </div>
     <div class="mb12">
-      <label class="label" id="aiToolPhotoLabel">Photo</label>
+      <label class="label" id="aiToolPhotoLabel">Photo or video</label>
       <div class="row">
         <button class="btn btn-secondary btn-sm" onclick="document.getElementById('aiToolPhotoIn').click()">📷 Add photo</button>
         <img id="aiToolPhotoPrev" class="photo-prev" style="display:none">
@@ -1524,7 +1528,7 @@ let aiToolType=null, aiToolPhotoData=null, aiToolFrames=[];
 const AI_TOOLS = {
   runForm: {
     title:"🏃 Running form check",
-    desc:"Record a short video (5-10 sec) side-on while running — or upload a photo. The app extracts 5 frames from video so AI analyses your full gait cycle.",
+    desc:"Record 5-10 sec video or take a photo. 📹 Best results: film side-on at waist height · natural pace not posed · full body in frame · 1-2 strides minimum.",
     photoLabel:"Video or photo of your running form",
     acceptsVideo:true,
     descLabel:"Any context",
@@ -1537,7 +1541,7 @@ Give specific actionable cues referencing what you observe. Flag injury risks. 5
   },
   gymForm: {
     title:"🏋️ Exercise form check",
-    desc:"Record a short video (5-10 sec) of yourself performing the exercise — or upload a photo. AI analyses the full range of motion from extracted frames.",
+    desc:"Record 5-10 sec video or take a photo. 📹 Best results: film from 45° angle · full movement in frame · 1-2 complete reps · include start and end position.",
     photoLabel:"Video or photo of your exercise",
     acceptsVideo:true,
     descLabel:"What exercise and any context",
@@ -1579,9 +1583,20 @@ function openAITool(type) {
   document.getElementById("aiToolErr").style.display="none";
   document.getElementById("aiToolRunBtn").textContent="Analyse";
   document.getElementById("aiToolRunBtn").disabled=false;
-  // Update label hint
-  const hint = tool.acceptsVideo?" (photo or video — video gives best results)":"";
-  document.getElementById("aiToolPhotoLabel").textContent=tool.photoLabel+hint;
+  document.getElementById("aiToolPhotoLabel").textContent=tool.photoLabel;
+  // Show filming tips for video tools
+  const tipsEl=document.getElementById("aiToolTips");
+  const tipsText=document.getElementById("aiToolTipsText");
+  const tipsMap={
+    runForm:"• Film side-on at waist height\n• Natural running pace — not posed\n• Full body in frame\n• At least 2-3 full strides\n• Treadmill or outdoors both work",
+    gymForm:"• Film from a 45° angle\n• Full movement in frame start to finish\n• 1-2 complete reps\n• Include both start and end position\n• Good lighting — avoid shadows",
+  };
+  if(tipsMap[type] && tipsEl && tipsText) {
+    tipsText.textContent=tipsMap[type];
+    tipsEl.style.display="block";
+  } else if(tipsEl) {
+    tipsEl.style.display="none";
+  }
   openModal("aiToolModal");
 }
 
