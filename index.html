@@ -968,6 +968,28 @@ function renderBody() {
     <div class="row mb12"><div class="card-title f1" style="margin:0">Log Today</div>${todayW?`<span class="xs c-green">✓ ${typeof todayW==="object"?todayW.kg:todayW} kg</span>`:""}</div>
     <button class="btn btn-secondary" onclick="openModal('weightModal')">Log weight & measurements</button>
   </div>`;
+
+  const photos=db.progressPhotos||[];
+  html+=`<div class="card">
+    <div class="row mb12">
+      <div class="card-title f1" style="margin:0">📸 Progress photos</div>
+      <button class="btn btn-primary btn-sm" onclick="openModal('progressModal')">+ Add</button>
+    </div>
+    <div class="xs c-subtle mb12">Monthly check-ins with guided positioning — AI tracks visible changes over time</div>
+    ${photos.length===0
+      ? `<div class="empty">No progress photos yet — tap + Add for your first monthly check-in</div>`
+      : `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          ${photos.slice(-4).reverse().map(p=>`
+            <div style="background:var(--surface2);border-radius:12px;overflow:hidden;cursor:pointer" onclick="viewProgressPhoto('${p.date}')">
+              <img src="${p.preview}" style="width:100%;aspect-ratio:3/4;object-fit:cover;display:block">
+              <div style="padding:8px">
+                <div style="font-size:11px;font-weight:600;color:var(--text)">${new Date(p.date).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}</div>
+                ${p.weight?`<div style="font-size:10px;color:var(--subtle)">${p.weight}kg</div>`:""}
+              </div>
+            </div>`).join("")}
+        </div>`}
+  </div>`;
+
   return html;
 }
 
