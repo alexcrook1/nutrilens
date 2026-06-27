@@ -782,6 +782,26 @@ function renderActivity() {
       }).join("")}
     </div>
   </div>`;
+
+  // Form analysis tools
+  html+=`<div class="card">
+    <div class="card-title">🤖 Form analysis</div>
+    <div class="xs c-subtle mb12">Photo-powered coaching for your training</div>
+    ${[
+      {id:"runForm", emoji:"🏃", title:"Running form check",  desc:"Photo of your gait — coaching cues and injury prevention"},
+      {id:"gymForm", emoji:"🏋️", title:"Exercise form check", desc:"Photo of any gym exercise — technique and risk flags"},
+    ].map(tool=>`
+      <div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);align-items:center">
+        <div style="font-size:26px;flex-shrink:0">${tool.emoji}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--bright)">${tool.title}</div>
+          <div style="font-size:11px;color:var(--subtle);margin-top:2px">${tool.desc}</div>
+        </div>
+        <button onclick="openAITool('${tool.id}')"
+          style="background:var(--muted);color:var(--text);border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0">Analyse</button>
+      </div>`).join("")}
+  </div>`;
+
   return html;
 }
 
@@ -863,24 +883,12 @@ function renderNutrition() {
     </div>`;
   }
 
-  // AI Tools
+  // AI Tools — supplement only in Nutrition
   html+=`<div class="card">
-    <div class="card-title">🤖 AI Analysis tools</div>
-    <div class="xs c-subtle mb12">Photo-powered analysis for training and health</div>
-    ${[
-      {id:"runForm",    emoji:"🏃",title:"Running form check",         desc:"Photo of your gait — get coaching cues and injury prevention tips"},
-      {id:"gymForm",    emoji:"🏋️",title:"Exercise form check",        desc:"Photo of any gym exercise — technique check and risk flags"},
-      {id:"supplement", emoji:"💊",title:"Supplement & medicine check", desc:"Photo of packaging — checks interactions with your diet and training"},
-    ].map(tool=>`
-      <div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);align-items:center">
-        <div style="font-size:26px;flex-shrink:0">${tool.emoji}</div>
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:600;color:var(--bright)">${tool.title}</div>
-          <div style="font-size:11px;color:var(--subtle);margin-top:2px">${tool.desc}</div>
-        </div>
-        <button onclick="openAITool('${tool.id}')"
-          style="background:var(--muted);color:var(--text);border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0">Analyse</button>
-      </div>`).join("")}
+    <div class="card-title">💊 Supplement & medicine check</div>
+    <div class="xs c-subtle mb12">Photo of any supplement or medicine packaging — AI checks interactions with your diet, training and goals</div>
+    <button onclick="openAITool('supplement')"
+      style="background:var(--muted);color:var(--text);border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;width:100%">📷 Analyse supplement or medicine</button>
   </div>`;
 
   return html;
