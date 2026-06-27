@@ -1524,35 +1524,40 @@ let aiToolType=null, aiToolPhotoData=null, aiToolFrames=[];
 const AI_TOOLS = {
   runForm: {
     title:"🏃 Running form check",
-    desc:"Upload a photo or video screenshot of yourself running. AI analyses your gait and gives specific coaching cues for efficiency and injury prevention.",
-    photoLabel:"Photo of your running form",
+    desc:"Record a short video (5-10 sec) side-on while running — or upload a photo. The app extracts 5 frames from video so AI analyses your full gait cycle.",
+    photoLabel:"Video or photo of your running form",
+    acceptsVideo:true,
     descLabel:"Any context",
-    descPlaceholder:"e.g. Taken at km 5 of a long run, feeling tired…",
-    prompt:(desc,profile)=>`Expert running coach analysing form for Alex (${profile.age||33}yr male, runs ~30km/week, Cyprus, goal: ${currentMode().name}).
+    descPlaceholder:"e.g. End of a long run, heel pain recently, trying to improve cadence…",
+    prompt:(desc,profile,frameCount)=>`Expert running coach analysing form for Alex (${profile.age||33}yr male, runs ~30km/week, Cyprus, goal: ${currentMode().name}).
 ${desc?"Context: "+desc:""}
-Analyse the running form in this image. Check: foot strike pattern, cadence clues, arm swing, forward lean, head position, overstriding signs.
-Give specific, actionable coaching cues. Flag any injury risks. 4-5 sentences, practical and direct.`
+You are seeing ${frameCount} ${frameCount>1?"frames extracted from a running video showing the full gait cycle":"photo of running form"}.
+Analyse: foot strike (heel/mid/forefoot), cadence clues, arm swing, forward lean, head position, overstriding, hip drop, any asymmetry.
+Give specific actionable cues referencing what you observe. Flag injury risks. 5-6 sentences, direct and practical.\`
   },
   gymForm: {
     title:"🏋️ Exercise form check",
-    desc:"Photo of you performing any gym exercise. AI checks your technique, flags risks, and gives specific correction cues.",
-    photoLabel:"Photo of your exercise form",
+    desc:"Record a short video (5-10 sec) of yourself performing the exercise — or upload a photo. AI analyses the full range of motion from extracted frames.",
+    photoLabel:"Video or photo of your exercise",
+    acceptsVideo:true,
     descLabel:"What exercise and any context",
     descPlaceholder:"e.g. Deadlift, 80kg, second set, lower back feeling tight…",
-    prompt:(desc,profile)=>`Expert strength coach analysing exercise form for Alex (${profile.age||33}yr male, ${profile.weight}kg).
+    prompt:(desc,profile,frameCount)=>`Expert strength coach analysing exercise form for Alex (${profile.age||33}yr male, ${profile.weight}kg).
 ${desc?"Exercise/context: "+desc:""}
-Analyse the form in this image. Check technique, alignment, joint positions, common fault patterns.
-Give specific corrections and cues. Flag any injury risks explicitly. Be direct and practical. 4-5 sentences.`
+You are seeing ${frameCount} ${frameCount>1?"frames extracted from a video showing the full range of motion":"photo of the exercise"}.
+Analyse: starting position, joint alignment throughout, depth/range of motion, bar path or limb tracking, common fault patterns, compensation or asymmetry.
+Give specific corrections and cues. Flag injury risks. 5-6 sentences, direct.\`
   },
   supplement: {
     title:"💊 Supplement & medicine check",
     desc:"Photo of any supplement or medicine packaging. AI checks interactions with your diet, training and goals.",
     photoLabel:"Photo of packaging or label",
+    acceptsVideo:false,
     descLabel:"Are you currently taking anything else?",
     descPlaceholder:"e.g. Taking vitamin D and omega-3 already…",
-    prompt:(desc,profile)=>`Sports nutritionist and pharmacist reviewing supplements/medicines for Alex (${profile.age||33}yr male, ${profile.weight}kg, goal: ${currentMode().name}, runs 30km/week, Mediterranean diet, Cyprus).
+    prompt:(desc,profile,frameCount)=>`Sports nutritionist and pharmacist reviewing supplements/medicines for Alex (${profile.age||33}yr male, ${profile.weight}kg, goal: ${currentMode().name}, runs 30km/week, Mediterranean diet, Cyprus).
 ${desc?"Currently taking: "+desc:""}
-Analyse what's shown in this photo. Cover: what it does, whether it's beneficial for his specific goals and training load, optimal timing and dosage, any interactions with his diet or training, and whether it's worth taking. Be specific and evidence-based. 4-5 sentences.`
+Analyse what's shown. Cover: what it does, whether it's beneficial for his goals and training load, optimal timing and dosage, any interactions with diet or training, and whether it's worth taking. Evidence-based. 4-5 sentences.\`
   }
 };
 
