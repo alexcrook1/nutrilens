@@ -844,6 +844,45 @@ function renderNutrition() {
     </div>
   </div>`;
 
+  // Saved meals (seen 5+ times)
+  const savedMeals=Object.values(db.mealMemory||{}).filter(m=>m.count>=5).sort((a,b)=>b.count-a.count);
+  if(savedMeals.length>0){
+    html+=`<div class="card">
+      <div class="card-title">⭐ Your regular meals</div>
+      <div class="xs c-subtle mb12">Tap to log instantly — no photo needed</div>
+      ${savedMeals.map(m=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+          <div style="font-size:24px;width:36px;text-align:center">${m.emoji}</div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;color:var(--bright)">${m.name}</div>
+            <div style="font-size:11px;color:var(--subtle);margin-top:2px">${m.calories} kcal · P:${m.protein}g C:${m.carbs}g F:${m.fat}g · logged ${m.count}x</div>
+          </div>
+          <button onclick="logSavedMeal(${JSON.stringify(m.name)},${m.calories},${m.protein},${m.carbs},${m.fat},${JSON.stringify(m.emoji)})"
+            style="background:var(--purple);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0">+ Log</button>
+        </div>`).join("")}
+    </div>`;
+  }
+
+  // AI Tools
+  html+=`<div class="card">
+    <div class="card-title">🤖 AI Analysis tools</div>
+    <div class="xs c-subtle mb12">Photo-powered analysis for training and health</div>
+    ${[
+      {id:"runForm",    emoji:"🏃",title:"Running form check",         desc:"Photo of your gait — get coaching cues and injury prevention tips"},
+      {id:"gymForm",    emoji:"🏋️",title:"Exercise form check",        desc:"Photo of any gym exercise — technique check and risk flags"},
+      {id:"supplement", emoji:"💊",title:"Supplement & medicine check", desc:"Photo of packaging — checks interactions with your diet and training"},
+    ].map(tool=>`
+      <div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);align-items:center">
+        <div style="font-size:26px;flex-shrink:0">${tool.emoji}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--bright)">${tool.title}</div>
+          <div style="font-size:11px;color:var(--subtle);margin-top:2px">${tool.desc}</div>
+        </div>
+        <button onclick="openAITool('${tool.id}')"
+          style="background:var(--muted);color:var(--text);border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0">Analyse</button>
+      </div>`).join("")}
+  </div>`;
+
   return html;
 }
 
