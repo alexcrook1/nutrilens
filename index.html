@@ -424,7 +424,7 @@ select.input{appearance:none}
         <img id="aiToolPhotoPrev" class="photo-prev" style="display:none">
         <button class="btn btn-ghost btn-sm" id="aiToolRemovePhoto" style="display:none" onclick="clearAIToolPhoto()">Remove</button>
       </div>
-      <input type="file" id="aiToolPhotoIn" accept="image/*" capture="environment" style="display:none" onchange="handleAIToolPhoto(this)">
+      <input type="file" id="aiToolPhotoIn" accept="image/*,video/*" capture="environment" style="display:none" onchange="handleAIToolPhoto(this)">
     </div>
     <div class="mb12" id="aiToolDescWrap">
       <label class="label" id="aiToolDescLabel">Additional context <span class="xs c-subtle">optional</span></label>
@@ -1519,7 +1519,7 @@ function viewProgressPhoto(date) {
 }
 
 // ── AI Tool modal ─────────────────────────────────────────────────────────────
-let aiToolType=null, aiToolPhotoData=null;
+let aiToolType=null, aiToolPhotoData=null, aiToolFrames=[];
 
 const AI_TOOLS = {
   runForm: {
@@ -1557,7 +1557,7 @@ Analyse what's shown in this photo. Cover: what it does, whether it's beneficial
 };
 
 function openAITool(type) {
-  aiToolType=type; aiToolPhotoData=null;
+  aiToolType=type; aiToolPhotoData=null; aiToolFrames=[];
   const tool=AI_TOOLS[type];
   document.getElementById("aiToolTitle").textContent=tool.title;
   document.getElementById("aiToolDesc").textContent=tool.desc;
@@ -1568,43 +1568,118 @@ function openAITool(type) {
   document.getElementById("aiToolPhotoPrev").style.display="none";
   document.getElementById("aiToolRemovePhoto").style.display="none";
   document.getElementById("aiToolPhotoIn").value="";
+  // Update accept attribute based on tool
+  document.getElementById("aiToolPhotoIn").accept=tool.acceptsVideo?"image/*,video/*":"image/*";
   document.getElementById("aiToolResult").style.display="none";
   document.getElementById("aiToolErr").style.display="none";
   document.getElementById("aiToolRunBtn").textContent="Analyse";
   document.getElementById("aiToolRunBtn").disabled=false;
+  // Update label hint
+  const hint = tool.acceptsVideo?" (photo or video — video gives best results)":"";
+  document.getElementById("aiToolPhotoLabel").textContent=tool.photoLabel+hint;
   openModal("aiToolModal");
 }
 
 function handleAIToolPhoto(input) {
   const file=input.files[0]; if(!file) return;
-  const img=new Image(), reader=new FileReader();
-  reader.onload=ev=>{
-    img.onload=()=>{
-      const MAX=1024, canvas=document.createElement("canvas");
-      let w=img.width, h=img.height;
-      if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;}}
-      canvas.width=w; canvas.height=h;
-      canvas.getContext("2d").drawImage(img,0,0,w,h);
-      const compressed=canvas.toDataURL("image/jpeg",0.8);
-      aiToolPhotoData={base64:compressed.split(",")[1],mime:"image/jpeg",preview:compressed};
-      document.getElementById("aiToolPhotoPrev").src=compressed;
-      document.getElementById("aiToolPhotoPrev").style.display="block";
-      document.getElementById("aiToolRemovePhoto").style.display="inline-block";
+  const isVideo=file.type.startsWith("video/");
+
+  if(isVideo) {
+    // Extract frames from video
+    const errEl=document.getElementById("aiToolErr");
+    errEl.style.display="none";
+    document.getElementById("aiToolRunBtn").disabled=true;
+    document.getElementById("aiToolRunBtn").innerHTML='<span class="spin"></span>Extracting frames…';
+
+    const video=document.createElement("video");
+    video.muted=true; video.playsInline=true;
+    const url=URL.createObjectURL(file);
+    video.src=url;
+
+    video.addEventListener("loadedmetadata", ()=>{
+      const duration=video.duration;
+      const NUM_FRAMES=5;
+      const times=[0.1,0.25,0.45,0.65,0.85].map(t=>t*duration);
+      aiToolFrames=[]; aiToolPhotoData=null;
+      let captured=0;
+
+      const captureFrame=(t)=>{
+        return new Promise(resolve=>{
+          video.currentTime=t;
+          video.addEventListener("seeked", function onSeeked(){
+            video.removeEventListener("seeked",onSeeked);
+            const canvas=document.createElement("canvas");
+            const MAX=800;
+            let w=video.videoWidth, h=video.videoHeight;
+            if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;}}
+            canvas.width=w; canvas.height=h;
+            canvas.getContext("2d").drawImage(video,0,0,w,h);
+            const dataUrl=canvas.toDataURL("image/jpeg",0.75);
+            resolve({base64:dataUrl.split(",")[1],mime:"image/jpeg",preview:dataUrl,time:t.toFixed(2)});
+          },{once:true});
+        });
+      };
+
+      (async()=>{
+        for(const t of times) {
+          const frame=await captureFrame(t);
+          aiToolFrames.push(frame);
+        }
+        URL.revokeObjectURL(url);
+        // Show first frame as preview
+        const prev=document.getElementById("aiToolPhotoPrev");
+        prev.src=aiToolFrames[0].preview; prev.style.display="block";
+        document.getElementById("aiToolRemovePhoto").style.display="inline-block";
+        document.getElementById("aiToolRunBtn").disabled=false;
+        document.getElementById("aiToolRunBtn").textContent="Analyse";
+        // Show frame count
+        const lbl=document.getElementById("aiToolPhotoLabel");
+        lbl.textContent=lbl.textContent.replace(/\s*\(.*\)/,"")+` (${aiToolFrames.length} frames extracted ✓)`;
+      })();
+    });
+    video.addEventListener("error",()=>{
+      errEl.textContent="Could not read video — try a shorter clip or use a photo instead";
+      errEl.style.display="block";
+      document.getElementById("aiToolRunBtn").disabled=false;
+      document.getElementById("aiToolRunBtn").textContent="Analyse";
+    });
+    video.load();
+  } else {
+    // Photo handling (unchanged)
+    aiToolFrames=[];
+    const img=new Image(), reader=new FileReader();
+    reader.onload=ev=>{
+      img.onload=()=>{
+        const MAX=1024, canvas=document.createElement("canvas");
+        let w=img.width, h=img.height;
+        if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;}}
+        canvas.width=w; canvas.height=h;
+        canvas.getContext("2d").drawImage(img,0,0,w,h);
+        const compressed=canvas.toDataURL("image/jpeg",0.8);
+        aiToolPhotoData={base64:compressed.split(",")[1],mime:"image/jpeg",preview:compressed};
+        document.getElementById("aiToolPhotoPrev").src=compressed;
+        document.getElementById("aiToolPhotoPrev").style.display="block";
+        document.getElementById("aiToolRemovePhoto").style.display="inline-block";
+      };
+      img.src=ev.target.result;
     };
-    img.src=ev.target.result;
-  };
-  reader.readAsDataURL(file);
+    reader.readAsDataURL(file);
+  }
 }
 
 function clearAIToolPhoto() {
-  aiToolPhotoData=null;
+  aiToolPhotoData=null; aiToolFrames=[];
   document.getElementById("aiToolPhotoPrev").style.display="none";
   document.getElementById("aiToolRemovePhoto").style.display="none";
   document.getElementById("aiToolPhotoIn").value="";
 }
 
 async function runAITool() {
-  if(!aiToolPhotoData){document.getElementById("aiToolErr").textContent="Add a photo first";document.getElementById("aiToolErr").style.display="block";return;}
+  const hasPhoto=!!aiToolPhotoData, hasFrames=aiToolFrames.length>0;
+  if(!hasPhoto && !hasFrames){
+    document.getElementById("aiToolErr").textContent="Add a photo or video first";
+    document.getElementById("aiToolErr").style.display="block"; return;
+  }
   const btn=document.getElementById("aiToolRunBtn");
   btn.disabled=true; btn.innerHTML='<span class="spin"></span>Analysing…';
   document.getElementById("aiToolErr").style.display="none";
@@ -1612,15 +1687,25 @@ async function runAITool() {
 
   const tool=AI_TOOLS[aiToolType];
   const desc=document.getElementById("aiToolDescIn").value.trim();
-  const prompt=tool.prompt(desc,db.profile);
+
+  // Build content array — multiple frames for video, single image for photo
+  const content=[];
+  if(hasFrames) {
+    // Add all frames with labels
+    aiToolFrames.forEach((f,i)=>{
+      content.push({type:"text",text:`Frame ${i+1} of ${aiToolFrames.length} (at ${f.time}s):`});
+      content.push({type:"image",source:{type:"base64",media_type:f.mime,data:f.base64}});
+    });
+  } else {
+    content.push({type:"image",source:{type:"base64",media_type:aiToolPhotoData.mime,data:aiToolPhotoData.base64}});
+  }
+  content.push({type:"text",text:tool.prompt(desc,db.profile,hasFrames?aiToolFrames.length:1)});
 
   try {
     const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:400,
-        messages:[{role:"user",content:[
-          {type:"image",source:{type:"base64",media_type:aiToolPhotoData.mime,data:aiToolPhotoData.base64}},
-          {type:"text",text:prompt}
-        ]}]})});
+      body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:500,
+        messages:[{role:"user",content}]})});
+    if(!r.ok) throw new Error("API "+r.status);
     const d=await r.json();
     const text=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
     document.getElementById("aiToolResultText").textContent=text;
