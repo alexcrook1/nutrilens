@@ -1537,7 +1537,7 @@ const AI_TOOLS = {
 ${desc?"Context: "+desc:""}
 You are seeing ${frameCount} ${frameCount>1?"frames extracted from a running video showing the full gait cycle":"photo of running form"}.
 Analyse: foot strike (heel/mid/forefoot), cadence clues, arm swing, forward lean, head position, overstriding, hip drop, any asymmetry.
-Give specific actionable cues referencing what you observe. Flag injury risks. 5-6 sentences, direct and practical.\`
+Give specific actionable cues referencing what you observe. Flag injury risks. 5-6 sentences, direct and practical.`
   },
   gymForm: {
     title:"🏋️ Exercise form check",
@@ -1550,7 +1550,7 @@ Give specific actionable cues referencing what you observe. Flag injury risks. 5
 ${desc?"Exercise/context: "+desc:""}
 You are seeing ${frameCount} ${frameCount>1?"frames extracted from a video showing the full range of motion":"photo of the exercise"}.
 Analyse: starting position, joint alignment throughout, depth/range of motion, bar path or limb tracking, common fault patterns, compensation or asymmetry.
-Give specific corrections and cues. Flag injury risks. 5-6 sentences, direct.\`
+Give specific corrections and cues. Flag injury risks. 5-6 sentences, direct.`
   },
   supplement: {
     title:"💊 Supplement & medicine check",
@@ -1561,7 +1561,7 @@ Give specific corrections and cues. Flag injury risks. 5-6 sentences, direct.\`
     descPlaceholder:"e.g. Taking vitamin D and omega-3 already…",
     prompt:(desc,profile,frameCount)=>`Sports nutritionist and pharmacist reviewing supplements/medicines for Alex (${profile.age||33}yr male, ${profile.weight}kg, goal: ${currentMode().name}, runs 30km/week, Mediterranean diet, Cyprus).
 ${desc?"Currently taking: "+desc:""}
-Analyse what's shown. Cover: what it does, whether it's beneficial for his goals and training load, optimal timing and dosage, any interactions with diet or training, and whether it's worth taking. Evidence-based. 4-5 sentences.\`
+Analyse what's shown. Cover: what it does, whether it's beneficial for his goals and training load, optimal timing and dosage, any interactions with diet or training, and whether it's worth taking. Evidence-based. 4-5 sentences.`
   }
 };
 
