@@ -1065,7 +1065,8 @@ function renderHistory() {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function mbar(label,val,max,color) {
   const pct=Math.min(val/max*100,100).toFixed(1);
-  return `<div class="mbar"><div class="mbar-top"><span>${label}</span><span class="mbar-val">${typeof val==="number"&&val>100?Math.round(val)+"ml":Math.round(val)+(label==="Hydration"?"ml":"g")}</span></div><div class="mbar-track"><div class="mbar-fill" style="width:${pct}%;background:${color}"></div></div></div>`;
+  const unit=label==="Hydration"?"ml":"g";
+  return `<div class="mbar"><div class="mbar-top"><span>${label}</span><span class="mbar-val">${Math.round(val)}${unit}</span></div><div class="mbar-track"><div class="mbar-fill" style="width:${pct}%;background:${color}"></div></div></div>`;
 }
 function weightChart() {
   const entries=Object.entries(db.weights)
