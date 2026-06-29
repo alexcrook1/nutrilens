@@ -76,7 +76,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
 .log-icon{width:44px;height:44px;border-radius:8px;background:var(--muted);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px}
 .log-name{font-size:13px;font-weight:600;color:var(--bright)}
 .log-meta{font-size:11px;color:var(--subtle);margin-top:2px;line-height:1.5}
-.del-btn{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0 0 0 6px;line-height:1;flex-shrink:0}
+.del-btn{background:rgba(244,96,96,.1);border:none;color:var(--red);font-size:16px;cursor:pointer;padding:4px 8px;border-radius:6px;line-height:1;flex-shrink:0}
 .act-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
 .act-item:last-child{border-bottom:none}
 .act-emoji{font-size:26px;line-height:1;width:36px;text-align:center}
@@ -547,7 +547,23 @@ let currentTab="today", pendingPhoto=null, pendingLog=null, logType="food", selE
 function switchTab(tab) {
   currentTab=tab;
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.tab===tab));
-  checkStravaCallback();
+  // Clean duplicate log entries (same name + same minute)
+(function deduplicateLogs(){
+  Object.keys(db.logs).forEach(date=>{
+    const seen=new Set(), cleaned=[];
+    (db.logs[date]||[]).forEach(l=>{
+      const key=l.name+"|"+l.time+"|"+l.type;
+      if(!seen.has(key)){ seen.add(key); cleaned.push(l); }
+    });
+    if(cleaned.length !== (db.logs[date]||[]).length){
+      console.log("Removed",db.logs[date].length-cleaned.length,"duplicates from",date);
+      db.logs[date]=cleaned;
+    }
+  });
+  save();
+})();
+
+checkStravaCallback();
 render();
 if(stravaConnected()) syncStrava();
 
@@ -1263,18 +1279,24 @@ Reply ONLY valid JSON no markdown:
 
 function confirmLog() {
   if(!pendingLog) return;
+  // Prevent double submission
+  const confirmBtn = document.querySelector('#logResult .btn-primary');
+  if(confirmBtn) { confirmBtn.disabled=true; confirmBtn.textContent="Adding…"; }
+
   const t=today(), desc=document.getElementById("logDesc").value.trim();
   const isFood=pendingLog._isFood;
+
   // Handle clarification request
   if(!isFood && pendingLog.needsClarification) {
     const answer = prompt(pendingLog.needsClarification);
+    if(confirmBtn) { confirmBtn.disabled=false; confirmBtn.textContent="Add to log"; }
     if(answer) {
       document.getElementById("logDesc").value += " — " + answer;
-      resetLog();
-      analyseLog();
-      return;
+      resetLog(); analyseLog(); return;
     }
+    return;
   }
+
   const entry={
     id:Date.now().toString(),
     time:new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),
@@ -1283,23 +1305,30 @@ function confirmLog() {
     confidence:pendingLog.confidence,
     notes:pendingLog.notes,
     preview:pendingPhoto?.preview||null,
-    // Food fields
     calories:pendingLog.calories||0,
     protein:isFood?pendingLog.protein:0,
     carbs:isFood?pendingLog.carbs:0,
     fat:isFood?pendingLog.fat:0,
     micros:isFood?pendingLog.micros:null,
-    // Drink fields
     ml:isFood?0:(pendingLog.volume_ml||0),
     hydro_ml:isFood?0:(pendingLog.hydration_ml||0),
     caffeine_mg:isFood?0:(pendingLog.caffeine_mg||0),
   };
+
+  // Clear pending state BEFORE saving to prevent double-tap
+  pendingLog=null; pendingPhoto=null;
+
   if(!db.logs[t]) db.logs[t]=[];
   db.logs[t].push(entry);
   save(); closeModal("logModal"); render();
 }
 
-function delLog(id){const t=today();db.logs[t]=(db.logs[t]||[]).filter(l=>l.id!==id);save();render();}
+function delLog(id){
+  if(!confirm("Remove this item from your log?")) return;
+  const t=today();
+  db.logs[t]=(db.logs[t]||[]).filter(l=>l.id!==id);
+  save(); render();
+}
 
 // ── Activity ──────────────────────────────────────────────────────────────────
 function pickAct(name,emoji,met){selEmoji=emoji;selMET=met;document.getElementById("actName").value=name;document.getElementById("actName").dataset.met=met;autoCalcCal();document.getElementById("actDur").focus();}
@@ -1894,6 +1923,22 @@ async function checkStravaCallback(){
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────────────────
+// Clean duplicate log entries (same name + same minute)
+(function deduplicateLogs(){
+  Object.keys(db.logs).forEach(date=>{
+    const seen=new Set(), cleaned=[];
+    (db.logs[date]||[]).forEach(l=>{
+      const key=l.name+"|"+l.time+"|"+l.type;
+      if(!seen.has(key)){ seen.add(key); cleaned.push(l); }
+    });
+    if(cleaned.length !== (db.logs[date]||[]).length){
+      console.log("Removed",db.logs[date].length-cleaned.length,"duplicates from",date);
+      db.logs[date]=cleaned;
+    }
+  });
+  save();
+})();
+
 checkStravaCallback();
 render();
 if(stravaConnected()) syncStrava();
