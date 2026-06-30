@@ -577,7 +577,9 @@ if(stravaConnected()) syncStrava();
 
 // Auto-sync when app becomes visible (return from background)
 document.addEventListener("visibilitychange", () => {
-  if(document.visibilityState === "visible" && stravaConnected()) {
+  const logModalOpen = document.getElementById("logModal")?.style.display === "flex";
+  const actModalOpen = document.getElementById("actModal")?.style.display === "flex";
+  if(document.visibilityState === "visible" && stravaConnected() && !logModalOpen && !actModalOpen) {
     syncStrava(true);
   }
 });
@@ -597,11 +599,6 @@ document.getElementById("content").addEventListener("touchend", e => {
 
 // ── Render ────────────────────────────────────────────────────────────────────
 function render() {
-  // Don't re-render while the log modal is open with a pending analysis result —
-  // prevents Strava auto-sync or visibility-change events from disrupting an in-progress log
-  const logModalOpen = document.getElementById("logModal")?.style.display === "flex";
-  if(logModalOpen && pendingLog) return;
-
   const mode=currentMode();
   document.getElementById("modeEmoji").textContent=mode.emoji;
   document.getElementById("modeName").textContent=mode.name;
@@ -1156,7 +1153,12 @@ function setLogType(type) {
 }
 
 function openLogModal(type="food") {
-  logType=(type==="food"||type==="drink")?type:"drink"; pendingLog=null; pendingPhoto=null;
+  // Hard reset all state - prevents any leakage from a previous session
+  logType=(type==="food"||type==="drink")?type:"drink";
+  pendingLog=null; pendingPhoto=null;
+  // Re-enable the confirm button in case it was left disabled from a previous failed save
+  const confirmBtn = document.querySelector('#logResult .btn-primary');
+  if(confirmBtn) { confirmBtn.disabled=false; confirmBtn.textContent="Add to log"; }
   document.getElementById("logDesc").value="";
   document.getElementById("photoPrev").style.display="none";
   document.getElementById("removePhoto").style.display="none";
@@ -2048,7 +2050,9 @@ if(stravaConnected()) syncStrava();
 
 // Auto-sync when app becomes visible (return from background)
 document.addEventListener("visibilitychange", () => {
-  if(document.visibilityState === "visible" && stravaConnected()) {
+  const logModalOpen = document.getElementById("logModal")?.style.display === "flex";
+  const actModalOpen = document.getElementById("actModal")?.style.display === "flex";
+  if(document.visibilityState === "visible" && stravaConnected() && !logModalOpen && !actModalOpen) {
     syncStrava(true);
   }
 });
