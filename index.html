@@ -513,9 +513,10 @@ function freshDB() {
 function save() {
   try {
     localStorage.setItem(SK,JSON.stringify(db));
+    return true;
   } catch(e) {
     console.error("Save failed:", e);
-    alert("Could not save — your device storage may be full. Try freeing up space or removing old progress photos.");
+    return false;
   }
 }
 function today() { return new Date().toISOString().slice(0,10); }
@@ -1353,7 +1354,18 @@ function confirmLog() {
 
   if(!db.logs[t]) db.logs[t]=[];
   db.logs[t].push(entry);
-  save(); closeModal("logModal"); render();
+  const saved = save();
+
+  if(saved) {
+    closeModal("logModal");
+    render();
+  } else {
+    // Save failed - remove the entry we just added since it wasn't persisted, re-enable button
+    db.logs[t]=db.logs[t].filter(l=>l.id!==entry.id);
+    if(confirmBtn) { confirmBtn.disabled=false; confirmBtn.textContent="Add to log"; }
+    showErr("logErr", "Storage is full — go to History tab and tap 'Free up space', then try again");
+    document.getElementById("logErr").style.display="block";
+  }
 }
 
 function delLog(id){
