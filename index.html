@@ -510,7 +510,14 @@ function freshDB() {
     microAlerts:null, microAlertsDate:null
   };
 }
-function save() { localStorage.setItem(SK,JSON.stringify(db)); }
+function save() {
+  try {
+    localStorage.setItem(SK,JSON.stringify(db));
+  } catch(e) {
+    console.error("Save failed:", e);
+    alert("Could not save — your device storage may be full. Try freeing up space or removing old progress photos.");
+  }
+}
 function today() { return new Date().toISOString().slice(0,10); }
 function fmtDate(d) { return new Date(d).toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"}); }
 
@@ -1279,7 +1286,12 @@ Reply ONLY valid JSON no markdown:
 }
 
 function confirmLog() {
-  if(!pendingLog) return;
+  if(!pendingLog) {
+    console.warn("confirmLog called but pendingLog is empty");
+    showErr("logErr", "Something went wrong — please re-analyse and try again");
+    document.getElementById("logErr").style.display="block";
+    return;
+  }
   // Prevent double submission
   const confirmBtn = document.querySelector('#logResult .btn-primary');
   if(confirmBtn) { confirmBtn.disabled=true; confirmBtn.textContent="Adding…"; }
