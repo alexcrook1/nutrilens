@@ -596,6 +596,11 @@ document.getElementById("content").addEventListener("touchend", e => {
 
 // ── Render ────────────────────────────────────────────────────────────────────
 function render() {
+  // Don't re-render while the log modal is open with a pending analysis result —
+  // prevents Strava auto-sync or visibility-change events from disrupting an in-progress log
+  const logModalOpen = document.getElementById("logModal")?.style.display === "flex";
+  if(logModalOpen && pendingLog) return;
+
   const mode=currentMode();
   document.getElementById("modeEmoji").textContent=mode.emoji;
   document.getElementById("modeName").textContent=mode.name;
