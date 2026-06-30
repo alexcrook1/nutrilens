@@ -1071,6 +1071,21 @@ function renderHistory() {
     });
     html+=`</div>`;
   }
+
+  // Storage management
+  const storageInfo = getStorageInfo();
+  html+=`<div class="card">
+    <div class="card-title">💾 Storage</div>
+    <div class="xs c-subtle mb12">Your data is stored on this device only</div>
+    <div class="prog-track"><div class="prog-fill" style="width:${Math.min(storageInfo.pct,100)}%;background:${storageInfo.pct>80?"var(--red)":storageInfo.pct>50?"var(--yellow)":"var(--green)"}"></div></div>
+    <div class="xs c-subtle mt8">${storageInfo.usedMB}MB used of ~5MB available (${storageInfo.pct}%)</div>
+    ${storageInfo.pct>70?`<div class="xs c-red mt8">⚠ Storage getting full — clear old photos to keep logging meals</div>`:""}
+    <div class="row mt12" style="gap:8px">
+      <button class="btn btn-secondary f1" onclick="exportData()">📤 Export backup</button>
+      <button class="btn btn-secondary f1" onclick="clearOldPhotos()">🗑 Free up space</button>
+    </div>
+  </div>`;
+
   return html;
 }
 
