@@ -1787,6 +1787,64 @@ async function runAITool() {
 
 function showErr(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display="block";}
 
+// ── Storage management ─────────────────────────────────────────────────────────
+function getStorageInfo() {
+  const raw = localStorage.getItem(SK) || "";
+  const bytes = new Blob([raw]).size;
+  const MB = (bytes / (1024*1024)).toFixed(2);
+  const LIMIT_MB = 5; // typical localStorage limit
+  const pct = Math.round((bytes / (LIMIT_MB*1024*1024)) * 100);
+  return { usedMB: MB, pct };
+}
+
+function exportData() {
+  try {
+    const dataStr = JSON.stringify(db, null, 2);
+    const blob = new Blob([dataStr], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `nutrilens-backup-${today()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch(e) {
+    alert("Export failed: " + e.message);
+  }
+}
+
+function clearOldPhotos() {
+  const photoCount = (db.progressPhotos||[]).length;
+  const mealPhotoCount = Object.values(db.logs||{}).flat().filter(l=>l.preview).length;
+
+  if(photoCount===0 && mealPhotoCount===0) {
+    alert("No photos to clear — your storage is mostly text data already.");
+    return;
+  }
+
+  const msg = `This will remove photo images to free up space (keeping all your calorie/macro/weight data):\n\n`+
+    `• ${mealPhotoCount} meal/drink photos\n`+
+    `• Keep your most recent 2 progress photos, remove older ones (${Math.max(0,photoCount-2)} photos)\n\n`+
+    `This cannot be undone. Continue?`;
+
+  if(!confirm(msg)) return;
+
+  // Remove meal/drink photo previews (keep all the data, just drop the image)
+  Object.keys(db.logs||{}).forEach(date=>{
+    (db.logs[date]||[]).forEach(l=>{ if(l.preview) l.preview=null; });
+  });
+
+  // Keep only most recent 2 progress photos
+  if(db.progressPhotos && db.progressPhotos.length>2) {
+    db.progressPhotos = db.progressPhotos.slice(-2);
+  }
+
+  save();
+  alert("Storage cleared! Your meal data, macros and history are all intact — just the images were removed.");
+  render();
+}
+
 // ── Activity Suggestions ───────────────────────────────────────────────────────
 async function getActivitySuggestions() {
   const btn=document.getElementById("actSuggestBtn");
