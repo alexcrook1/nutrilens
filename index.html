@@ -766,7 +766,10 @@ function renderActivity() {
   const burn=actBurn(t);
   const weekDates=[...Array(7)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()-i);return d.toISOString().slice(0,10);});
   const weekBurn=weekDates.reduce((s,d)=>s+actBurn(d),0);
-  const weekDist=weekDates.reduce((s,d)=>s+[...(db.activities[d]||[]),(db.stravaCache[d]||[])].reduce((s2,a)=>s2+(a.distance_m?a.distance_m/1000:a.distance||0),0),0);
+  const weekDist=weekDates.reduce((s,d)=>{
+    const allActs=[...(db.activities[d]||[]),...(db.stravaCache[d]||[])];
+    return s+allActs.reduce((s2,a)=>s2+(a.distance_m?a.distance_m/1000:(a.distance||0)),0);
+  },0);
 
   let html=`<div class="card">
     <div class="row mb12">
@@ -2017,17 +2020,39 @@ async function ensureFreshToken(){
   }catch(e){console.warn("Token refresh:",e);}
   return null;
 }
+async function syncStravaDate(token, date) {
+  try {
+    const r=await fetch("/api/strava-activities",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({access_token:token,date})});
+    const d=await r.json();
+    if(Array.isArray(d.activities)){db.stravaCache[date]=d.activities;}
+  } catch(e){console.warn("Strava sync "+date+":",e.message);}
+}
+
 async function syncStrava(force=false){
   const t=today();
   if(!stravaConnected()) return;
+  // Check if we need to sync at all
   if(!force&&db.stravaCache[t]!==undefined) return;
   stravaLoading=true; render();
   try{
     const token=await ensureFreshToken();
     if(!token){stravaLoading=false;render();return;}
-    const r=await fetch("/api/strava-activities",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({access_token:token,date:t})});
-    const d=await r.json();
-    if(Array.isArray(d.activities)){db.stravaCache[t]=d.activities;save();}
+
+    // Sync today first (most important)
+    await syncStravaDate(token, t);
+    save(); render();
+
+    // Then backfill past 6 days if not already cached
+    const past=[...Array(6)].map((_,i)=>{
+      const d=new Date(); d.setDate(d.getDate()-(i+1));
+      return d.toISOString().slice(0,10);
+    });
+    for(const date of past){
+      if(force || db.stravaCache[date]===undefined){
+        await syncStravaDate(token, date);
+      }
+    }
+    save();
   }catch(e){console.warn("Strava sync:",e.message);}
   stravaLoading=false; render();
 }
