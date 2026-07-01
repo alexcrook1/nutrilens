@@ -459,7 +459,7 @@ const STRAVA_CLIENT_ID = "261019";
 const STRAVA_REDIRECT_URI = window.location.origin + "/strava-callback";
 
 const PROFILE = {
-  height:173, weight:77.55, age:33, sex:"male", targetWeight:70,
+  height:173, weight:77.55, age:33, sex:"male", targetWeight:70, startWeight:77.55,
   location:"Cyprus", climate:"hot_mediterranean",
   context:"Works 8am-2pm Cyprus. Hot climate. Two young children. Family meals, no ingredient weighing. Runs ~30km/week, walks ~25km/week. Mediterranean/Cypriot diet."
 };
@@ -570,6 +570,18 @@ function switchTab(tab) {
   });
   save();
 })();
+
+// Migrate: set startWeight from earliest weight entry if not already stored
+if(!db.profile.startWeight) {
+  const entries = Object.entries(db.weights||{}).sort(([a],[b])=>a.localeCompare(b));
+  if(entries.length>0) {
+    const earliest = entries[0][1];
+    db.profile.startWeight = typeof earliest==="object" ? earliest.kg : earliest;
+  } else {
+    db.profile.startWeight = db.profile.weight;
+  }
+  save();
+}
 
 checkStravaCallback();
 render();
@@ -927,7 +939,8 @@ function renderNutrition() {
 // ── BODY ──────────────────────────────────────────────────────────────────────
 function renderBody() {
   const lw=latestW(), bmiVal=parseFloat(bmi()), cat=bmiCat(bmiVal), p=db.profile;
-  const progress=Math.max(0,Math.min(1,(p.weight-lw)/(p.weight-p.targetWeight)));
+  const startW = p.startWeight||p.weight;
+  const progress=Math.max(0,Math.min(1,(startW-lw)/(startW-p.targetWeight)));
   const r=44, circ=2*Math.PI*r, dash=Math.min((bmiVal-15)/25,1)*circ;
   const todayW=db.weights[today()];
 
@@ -968,9 +981,9 @@ function renderBody() {
 
   html+=`<div class="card">
     <div class="card-title">Goal Progress</div>
-    <div class="row mb8 xs c-sec"><div class="f1">Start ${p.weight} kg</div><div>Goal ${p.targetWeight} kg</div></div>
+    <div class="row mb8 xs c-sec"><div class="f1">Start ${p.startWeight||p.weight} kg</div><div>Goal ${p.targetWeight} kg</div></div>
     <div class="prog-track"><div class="prog-fill" style="width:${(progress*100).toFixed(1)}%"></div></div>
-    <div class="xs c-subtle mt8">${lw>p.targetWeight?`${(lw-p.targetWeight).toFixed(1)} kg remaining · ~${Math.ceil((lw-p.targetWeight)/0.5)} weeks at 500 kcal deficit`:"🎉 Goal reached!"}</div>
+    <div class="xs c-subtle mt8">${lw>p.targetWeight?`${(lw-p.targetWeight).toFixed(1)} kg to goal · ~${Math.ceil((lw-p.targetWeight)/0.5)} weeks at 500 kcal deficit`:"🎉 Goal reached!"}</div>
   </div>`;
 
   // Measurements
@@ -1397,7 +1410,9 @@ function confirmWeight(){
   const rhr=parseFloat(document.getElementById("rhrIn").value)||null;
   if(isNaN(w)||w<30||w>300) return;
   db.weights[today()]={kg:w, waist_cm:waist, rhr_bpm:rhr};
-  db.profile.weight=w;
+  db.profile.weight=w; // current weight updates
+  // startWeight only set once - never overwritten
+  if(!db.profile.startWeight) db.profile.startWeight=w;
   save();closeModal("weightModal");render();
 }
 
