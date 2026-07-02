@@ -1894,6 +1894,11 @@ async function runAITool() {
   }
 }
 
+function setWaterSlider(v) {
+  document.getElementById("waterSlider").value=v;
+  document.getElementById("waterSliderVal").textContent=v;
+}
+
 function logWaterQuick() {
   const ml = parseInt(document.getElementById("waterSlider").value)||0;
   if(ml<=0) return;
