@@ -201,8 +201,13 @@ select.input{appearance:none}
         style="width:100%;accent-color:var(--blue);height:6px;margin-bottom:12px"
         oninput="document.getElementById('waterSliderVal').textContent=this.value">
       <div style="display:flex;justify-content:space-between;margin-bottom:14px">
-        ${[150,250,330,500,750,1000,1500].map(v=>`<button onclick="document.getElementById('waterSlider').value=${v};document.getElementById('waterSliderVal').textContent=${v}"
-          style="background:var(--muted);border:none;border-radius:8px;padding:4px 6px;font-size:10px;color:var(--secondary);cursor:pointer">${v}</button>`).join("")}
+        <button onclick="setWaterSlider(150)" style="background:var(--muted);border:none;border-radius:8px;padding:5px 7px;font-size:11px;color:var(--secondary);cursor:pointer">150</button>
+        <button onclick="setWaterSlider(250)" style="background:var(--muted);border:none;border-radius:8px;padding:5px 7px;font-size:11px;color:var(--secondary);cursor:pointer">250</button>
+        <button onclick="setWaterSlider(330)" style="background:var(--muted);border:none;border-radius:8px;padding:5px 7px;font-size:11px;color:var(--secondary);cursor:pointer">330</button>
+        <button onclick="setWaterSlider(500)" style="background:var(--muted);border:none;border-radius:8px;padding:5px 7px;font-size:11px;color:var(--secondary);cursor:pointer">500</button>
+        <button onclick="setWaterSlider(750)" style="background:var(--muted);border:none;border-radius:8px;padding:5px 7px;font-size:11px;color:var(--secondary);cursor:pointer">750</button>
+        <button onclick="setWaterSlider(1000)" style="background:var(--muted);border:none;border-radius:8px;padding:5px 7px;font-size:11px;color:var(--secondary);cursor:pointer">1L</button>
+        <button onclick="setWaterSlider(1500)" style="background:var(--muted);border:none;border-radius:8px;padding:5px 7px;font-size:11px;color:var(--secondary);cursor:pointer">1.5L</button>
       </div>
       <button class="btn btn-primary btn-full" onclick="logWaterQuick()">Add water</button>
     </div>
