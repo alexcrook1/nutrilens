@@ -177,13 +177,34 @@ select.input{appearance:none}
       <div class="modal-title" id="logModalTitle">Log Meal or Drink</div>
       <button class="modal-close" onclick="closeModal('logModal')">×</button>
     </div>
-    <!-- Type selector: simple food/drink toggle -->
+    <!-- Type selector -->
     <div class="mb8">
       <label class="label">What are you logging?</label>
       <div class="type-row">
         <button class="type-pill selected" onclick="setLogType('food')" id="typeFood">🍽 Food</button>
-        <button class="type-pill" onclick="setLogType('drink')" id="typeDrink">🥤 Drink</button>
+        <button class="type-pill" onclick="setLogType('water')" id="typeWater">💧 Water</button>
+        <button class="type-pill" onclick="setLogType('drink')" id="typeDrink">🥤 Other drink</button>
       </div>
+    </div>
+
+    <!-- Quick water slider (shown when Water selected) -->
+    <div id="waterSliderSection" style="display:none;background:var(--surface2);border-radius:14px;padding:16px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:28px">💧</div>
+        <div style="text-align:center">
+          <div style="font-size:36px;font-weight:700;color:var(--blue);letter-spacing:-1px" id="waterSliderVal">500</div>
+          <div style="font-size:11px;color:var(--subtle)">ml</div>
+        </div>
+        <div style="font-size:11px;color:var(--subtle);text-align:right">Daily<br><span style="color:var(--blue)" id="waterDailyTotal">0</span>ml</div>
+      </div>
+      <input type="range" id="waterSlider" min="0" max="2000" step="50" value="500"
+        style="width:100%;accent-color:var(--blue);height:6px;margin-bottom:12px"
+        oninput="document.getElementById('waterSliderVal').textContent=this.value">
+      <div style="display:flex;justify-content:space-between;margin-bottom:14px">
+        ${[150,250,330,500,750,1000,1500].map(v=>`<button onclick="document.getElementById('waterSlider').value=${v};document.getElementById('waterSliderVal').textContent=${v}"
+          style="background:var(--muted);border:none;border-radius:8px;padding:4px 6px;font-size:10px;color:var(--secondary);cursor:pointer">${v}</button>`).join("")}
+      </div>
+      <button class="btn btn-primary btn-full" onclick="logWaterQuick()">Add water</button>
     </div>
     <div class="mb12">
       <label class="label">Describe it <span class="xs c-subtle">(e.g. "large flat white" or "500ml water")</span></label>
@@ -725,7 +746,8 @@ function renderToday() {
   </div>
   <div class="quick-strip">
     <div class="quick-card" onclick="openLogModal('food')"><span class="quick-card-icon">🍽</span><span class="quick-card-label">Food</span></div>
-    <div class="quick-card" onclick="openLogModal('water')"><span class="quick-card-icon">💧</span><span class="quick-card-label">Drink</span></div>
+    <div class="quick-card" onclick="openLogModal('water')"><span class="quick-card-icon">💧</span><span class="quick-card-label">Water</span></div>
+    <div class="quick-card" onclick="openLogModal('drink')"><span class="quick-card-icon">🥤</span><span class="quick-card-label">Drink</span></div>
     <div class="quick-card" onclick="openModal('actModal')"><span class="quick-card-icon">🏃</span><span class="quick-card-label">Activity</span></div>
     <div class="quick-card" onclick="openModal('weightModal')"><span class="quick-card-icon">⚖️</span><span class="quick-card-label">Weight</span></div>
     <div class="quick-card" onclick="getInsight()"><span class="quick-card-icon">🧠</span><span class="quick-card-label">AI Insight</span></div>
@@ -1160,21 +1182,61 @@ function doneCheckin(){
 function setLogType(type) {
   logType=type;
   document.querySelectorAll(".type-pill").forEach(p=>p.classList.remove("selected"));
-  const btnId = type==="food"?"typeFood":"typeDrink";
+  const btnId = type==="food"?"typeFood":type==="water"?"typeWater":"typeDrink";
   document.getElementById(btnId)?.classList.add("selected");
+
   const isFood=type==="food";
-  document.getElementById("logModalTitle").textContent=isFood?"Log Food":"Log Drink";
-  document.getElementById("logDesc").placeholder=isFood?"e.g. Greek salad with halloumi, olives and olive oil…":"e.g. Large flat white, bottle of water, glass of orange juice… The AI will identify it";
-  document.getElementById("photoHint").textContent=isFood?"— recommended for complex meals":"— great for drinks, AI identifies from photo";
+  const isWater=type==="water";
+
+  // Show/hide water slider vs AI analysis section
+  const sliderSection=document.getElementById("waterSliderSection");
+  const analyseSection=document.getElementById("logAnalyseBtn");
+  const descSection=document.querySelector("#logModal .mb12:nth-child(3)");
+
+  if(isWater){
+    document.getElementById("logModalTitle").textContent="Log Water";
+    if(sliderSection) sliderSection.style.display="block";
+    // Hide the description, photo and analyse sections
+    document.getElementById("logDesc").closest(".mb12").style.display="none";
+    document.querySelector("[for='photoIn']")?.closest(".mb12")?.setAttribute("style","display:none");
+    document.getElementById("logAnalyseBtn").style.display="none";
+    document.getElementById("logResult").style.display="none";
+    // Update daily total
+    const dailyWater=(db.logs[today()]||[]).reduce((s,l)=>s+(l.hydro_ml||0),0);
+    const el=document.getElementById("waterDailyTotal");
+    if(el) el.textContent=dailyWater;
+  } else {
+    document.getElementById("logModalTitle").textContent=isFood?"Log Food":"Log Drink";
+    if(sliderSection) sliderSection.style.display="none";
+    // Show description and photo sections
+    document.getElementById("logDesc").closest(".mb12").style.display="block";
+    document.querySelector("[for='photoIn']")?.closest(".mb12")?.removeAttribute("style");
+    if(pendingLog) {
+      document.getElementById("logAnalyseBtn").style.display="none";
+      document.getElementById("logResult").style.display="block";
+    } else {
+      document.getElementById("logAnalyseBtn").style.display="block";
+    }
+    document.getElementById("logDesc").placeholder=isFood
+      ?"e.g. Greek salad with halloumi, olives and olive oil…"
+      :"e.g. Large flat white, glass of orange juice… The AI will identify it";
+    document.getElementById("photoHint").textContent=isFood
+      ?"— recommended for complex meals"
+      :"— great for drinks, AI identifies from photo";
+  }
 }
 
 function openLogModal(type="food") {
-  // Hard reset all state - prevents any leakage from a previous session
-  logType=(type==="food"||type==="drink")?type:"drink";
+  // Hard reset all state
+  logType=(type==="food"||type==="drink"||type==="water")?type:"food";
   pendingLog=null; pendingPhoto=null;
-  // Re-enable the confirm button in case it was left disabled from a previous failed save
   const confirmBtn = document.querySelector('#logResult .btn-primary');
   if(confirmBtn) { confirmBtn.disabled=false; confirmBtn.textContent="Add to log"; }
+  // Reset water slider
+  const slider=document.getElementById("waterSlider");
+  if(slider) slider.value=500;
+  const sliderVal=document.getElementById("waterSliderVal");
+  if(sliderVal) sliderVal.textContent="500";
   document.getElementById("logDesc").value="";
   document.getElementById("photoPrev").style.display="none";
   document.getElementById("removePhoto").style.display="none";
@@ -1829,6 +1891,38 @@ async function runAITool() {
     document.getElementById("aiToolErr").textContent="Analysis failed: "+e.message;
     document.getElementById("aiToolErr").style.display="block";
     btn.textContent="Analyse"; btn.disabled=false;
+  }
+}
+
+function logWaterQuick() {
+  const ml = parseInt(document.getElementById("waterSlider").value)||0;
+  if(ml<=0) return;
+  const t=today();
+  const entry={
+    id:Date.now().toString(),
+    time:new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),
+    type:"water", name:`Water (${ml}ml)`,
+    calories:0, protein:0, carbs:0, fat:0,
+    ml, hydro_ml:ml, caffeine_mg:0,
+    confidence:"high", notes:null, preview:null
+  };
+  if(!db.logs[t]) db.logs[t]=[];
+  db.logs[t].push(entry);
+  const saved=save();
+  if(saved){
+    // Update daily total display
+    const newTotal=(db.logs[t]||[]).reduce((s,l)=>s+(l.hydro_ml||0),0);
+    const el=document.getElementById("waterDailyTotal");
+    if(el) el.textContent=newTotal;
+    // Flash confirmation
+    const btn=document.querySelector("#waterSliderSection .btn-primary");
+    if(btn){btn.textContent="✓ Added!";btn.style.background="var(--green)";}
+    setTimeout(()=>{
+      closeModal("logModal");
+      render();
+    },600);
+  } else {
+    showErr("logErr","Storage full — go to History tab and free up space");
   }
 }
 
