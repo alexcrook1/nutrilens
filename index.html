@@ -1379,19 +1379,21 @@ function renderAlpsPlan(plan, cw) {
       ${isOpen?`<div style="padding:0 14px 14px;border-top:1px solid var(--border)">
         <div style="font-size:11px;color:var(--secondary);padding:10px 0;font-style:italic">${w.theme}</div>
         ${w.runs.map(r=>`
-          <div class="session-tile" onclick="logPlanSession('${r.type} ${r.target}')">
+          ${(()=>{const done=isSessionComplete(r.type+" "+r.target);return `
+          <div class="session-tile${done?" completed":""}" onclick="logPlanSession('${r.type} ${r.target}')">
             <div style="display:flex;justify-content:space-between;align-items:flex-start">
               <div style="flex:1">
                 <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
-                  <span style="font-size:10px;font-weight:700;color:var(--orange);background:rgba(249,115,22,.1);padding:2px 6px;border-radius:6px">${r.day}</span>
+                  <span style="font-size:10px;font-weight:700;color:${done?"var(--green)":"var(--orange)"};background:${done?"rgba(45,212,191,.1)":"rgba(249,115,22,.1)"};padding:2px 6px;border-radius:6px">${r.day}</span>
                   <span style="font-size:13px;font-weight:600;color:var(--bright)">${r.type}</span>
+                  ${done?'<span style="font-size:11px;color:var(--green)">✓</span>':""}
                 </div>
-                <div style="font-size:12px;color:var(--purple2);font-weight:600">${r.target}</div>
+                <div style="font-size:12px;color:${done?"var(--green)":"var(--purple2)"};font-weight:600">${r.target}</div>
                 <div style="font-size:11px;color:var(--subtle);margin-top:3px">${r.notes}</div>
               </div>
-              <div style="background:var(--purple);color:#fff;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;flex-shrink:0;margin-left:8px;align-self:center">Log</div>
+              <div style="background:${done?"var(--green)":"var(--purple)"};color:#fff;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;flex-shrink:0;margin-left:8px;align-self:center">${done?"✓":"Log"}</div>
             </div>
-          </div>`).join("")}
+          </div>`;})()}`).join("")}
         ${w.gym.sessions>0?`<div style="background:rgba(167,139,250,.08);border-radius:10px;padding:10px 12px;margin-top:8px">
           <div style="font-size:10px;font-weight:700;color:var(--purple2);margin-bottom:6px">💪 GYM — ${w.gym.focus}</div>
           ${w.gym.exercises.map(e=>`<div style="font-size:11px;color:var(--secondary);padding:2px 0">· ${e}</div>`).join("")}
@@ -1450,8 +1452,13 @@ function renderStrengthPlan(plan) {
   plan.workouts.forEach(w=>{
     html+=`<div style="background:var(--surface);border:1px solid rgba(167,139,250,.2);border-radius:14px;margin-bottom:10px;overflow:hidden">
       <div style="padding:14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-        <div style="font-size:14px;font-weight:700;color:var(--purple2)">${w.name}</div>
-        <button onclick="logPlanSession('${w.name}')" style="background:rgba(167,139,250,.2);color:var(--purple2);border:1px solid rgba(167,139,250,.3);border-radius:8px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer">Log session</button>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--purple2)">${w.name}</div>
+          ${isSessionComplete(w.name)?'<div style="font-size:11px;color:var(--green);margin-top:2px">✓ Done this week</div>':""}
+        </div>
+        ${isSessionComplete(w.name)
+          ?'<div style="background:var(--green);color:#fff;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:600">✓ Done</div>'
+          :`<button onclick="logPlanSession('${w.name}')" style="background:rgba(167,139,250,.2);color:var(--purple2);border:1px solid rgba(167,139,250,.3);border-radius:8px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer">Log session</button>`}
       </div>
       <div style="padding:0 14px">
         ${w.exercises.map(e=>`
@@ -1595,29 +1602,32 @@ Include 4-8 weeks depending on the goal. Each week has 3-5 sessions. Be specific
       body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2000,messages:[{role:"user",content:prompt}]})});
     const d = await r.json();
     const text = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
-    // Extract JSON robustly
-    let jS=-1,jD=0,jE=-1;
-    for(let i=0;i<text.length;i++){
-      if(text[i]==="{"){if(jD===0)jS=i;jD++;}
-      else if(text[i]==="}"){jD--;if(jD===0){jE=i;break;}}
-    }
-    if(jS===-1||jE===-1) throw new Error("No JSON in response");
-    let pj=text.slice(jS,jE+1);
-    pj=pj.replace(/,([ \t\r\n]*[}\]])/g,"$1"); // trailing commas
-    pj=pj.replace(/(?<!\\)\n/g," ").replace(/(?<!\\)\t/g," "); // unescaped newlines
-    pj=pj.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g,""); // control chars
-    pj=pj.replace(/\u2018|\u2019/g,"").replace(/\u201c|\u201d/g,'\\"'); // smart quotes
+    // Extract and parse JSON from Claude response
+    // Remove any markdown code fences
+    let cleaned = text.replace(/```json/gi,"").replace(/```/g,"").trim();
+    // Find the JSON object
+    const jStart = cleaned.indexOf("{");
+    const jEnd = cleaned.lastIndexOf("}");
+    if(jStart === -1 || jEnd === -1) throw new Error("No JSON object found in response");
+    let pj = cleaned.slice(jStart, jEnd+1);
+    // Fix common issues
+    pj = pj.replace(/,(\s*[}\]])/g,"$1"); // trailing commas
+    pj = pj.replace(/\n/g," ").replace(/\r/g,""); // newlines in strings
+    pj = pj.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g,""); // control chars
+    // Parse
     let plan;
-    try { plan=JSON.parse(pj); }
-    catch(e) {
-      pj=pj.replace(/"notes"\s*:\s*"[^"]*"/g,'"notes":""').replace(/"tip"\s*:\s*"[^"]*"/g,'"tip":""');
-      plan=JSON.parse(pj);
+    try {
+      plan = JSON.parse(pj);
+    } catch(parseErr) {
+      // Fallback: strip notes/tips and retry
+      pj = pj.replace(/"notes"\s*:\s*"(?:[^"\\]|\\.)*"/g,'"notes":""')               .replace(/"tip"\s*:\s*"(?:[^"\\]|\\.)*"/g,'"tip":""')               .replace(/"theme"\s*:\s*"(?:[^"\\]|\\.)*"/g,'"theme":""');
+      plan = JSON.parse(pj);
     }
-    if(!plan.id) plan.id="custom_"+Date.now();
-    if(!plan.custom) plan.custom=true;
-    if(!plan.color) plan.color="#7c6ff7";
-    if(!plan.emoji) plan.emoji="\uD83C\uDFAF";
-    if(!Array.isArray(plan.weeks)) throw new Error("Missing weeks");
+    if(!plan.id) plan.id = "custom_" + Date.now();
+    if(!plan.custom) plan.custom = true;
+    if(!plan.color) plan.color = "#7c6ff7";
+    if(!plan.emoji) plan.emoji = "🎯";
+    if(!Array.isArray(plan.weeks)) throw new Error("Plan is missing weeks - please try again");
     // Store in db
     if(!db.customPlans) db.customPlans={};
     db.customPlans[plan.id]=plan;
