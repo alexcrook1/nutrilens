@@ -906,7 +906,7 @@ function renderToday() {
   if(dtr > 0 && dtr <= 40) {
     const cw = currentTrainingWeek();
     const alpsWeek = TRAINING_PLANS.alps50k.weeks[cw-1];
-    html+=`<div style="background:linear-gradient(135deg,#1a0a00,#2d1200);border:1px solid rgba(249,115,22,.3);border-radius:14px;padding:12px 14px;margin:12px 14px 0;display:flex;align-items:center;gap:12px" onclick="switchTab('training')">
+    html+=`<div style="background:linear-gradient(135deg,#1a0a00,#2d1200);border:1px solid rgba(249,115,22,.3);border-radius:14px;padding:12px 14px;margin:12px 14px 0;display:flex;align-items:center;gap:12px" onclick="switchTab('training');document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab==='training'))">
       <div style="font-size:28px">🏔</div>
       <div style="flex:1">
         <div style="font-size:11px;font-weight:700;color:var(--orange)">BAVARIAN ALPS 50KM</div>
@@ -1559,17 +1559,11 @@ async function generateNewPlan() {
   document.getElementById("newPlanErr").style.display="none";
 
   const cw = currentTrainingWeek();
-  // Pre-calculate values before template literal (avoids complex expressions inside ${})
-  const sleepEntries = Object.values(db.checkins).slice(-7).map(c=>c.sleep_hrs).filter(Boolean);
-  const avgSleepHrs = sleepEntries.length ? (sleepEntries.reduce((a,b)=>a+b,0)/sleepEntries.length).toFixed(1) : "7.0";
-  const weeklyRunKm = [...Array(7)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()-i);return d.toISOString().slice(0,10);})
-    .reduce((s,dt)=>{const acts=[...(db.activities[dt]||[]),...(db.stravaCache[dt]||[])];return s+acts.reduce((s2,a)=>s2+(a.distance_m?a.distance_m/1000:a.distance||0),0);},0).toFixed(0);
-
   const prompt = `You are a personal trainer and coach building a training plan for Alex.
 Profile: 33yr male, ${db.profile.weight}kg, Cyprus. Works 8am-2pm. Two young kids. Available to train most days but times vary. Morning before 8am or afternoon after 2pm.
-Current training: Running ${weeklyRunKm}km this week, open water swimming weekly, gym access (bench press, bodyweight).
+Current training: Running 30km/week, open water swimming weekly, gym access (bench press, bodyweight).
 Current mode: ${currentMode().name}.
-Sleep avg: ${avgSleepHrs}h.
+Sleep avg: ${(Object.entries(db.checkins).slice(-7).map(([,c])=>c.sleep_hrs).filter(Boolean).reduce((a,b)=>a+b,0)/Math.max(1,Object.entries(db.checkins).slice(-7).filter(([,c])=>c.sleep_hrs).length)).toFixed(1)}h.
 
 Goal: ${desc}
 
@@ -1594,7 +1588,7 @@ Build a structured training plan. Return ONLY valid JSON, no markdown:
     }
   ]
 }
-Include 4-8 weeks depending on the goal. Each week has 3-5 sessions. Be specific and realistic given his schedule and current fitness. IMPORTANT: Return ONLY raw JSON. No markdown backticks, no commentary. No trailing commas anywhere. Keep all string values on single lines.`;
+Include 4-8 weeks depending on the goal. Each week has 3-5 sessions. Be specific and realistic given his schedule and current fitness.`;
 
   try {
     const r = await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},
@@ -1602,11 +1596,7 @@ Include 4-8 weeks depending on the goal. Each week has 3-5 sessions. Be specific
     const d = await r.json();
     const text = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
     const start=text.indexOf("{"), end=text.lastIndexOf("}");
-    let planText = text.slice(start,end+1);
-    // Clean common JSON issues from AI output
-    planText = planText.replace(/,\s*}/g,'}').replace(/,\s*]/g,']');
-    planText = planText.replace(/[ --]/g,' ');
-    const plan = JSON.parse(planText);
+    const plan = JSON.parse(text.slice(start,end+1));
 
     // Store in db
     if(!db.customPlans) db.customPlans={};
