@@ -1585,19 +1585,29 @@ async function generateNewPlan() {
       body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2000,messages:[{role:"user",content:prompt}]})});
     const d = await r.json();
     const text = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
-    // Robustly extract JSON - find the outermost { } pair
-    let start=-1, depth=0, end=-1;
+    // Extract JSON using bracket matching
+    let jStart=-1, jDepth=0, jEnd=-1;
     for(let i=0;i<text.length;i++){
-      if(text[i]==="{"){if(depth===0)start=i;depth++;}
-      else if(text[i]==="}"){depth--;if(depth===0){end=i;break;}}
+      if(text[i]==="{"){if(jDepth===0)jStart=i;jDepth++;}
+      else if(text[i]==="}"){jDepth--;if(jDepth===0){jEnd=i;break;}}
     }
-    if(start===-1||end===-1) throw new Error("No JSON found in response");
-    let planJson = text.slice(start,end+1);
-    // Remove control characters that break JSON
-    planJson = planJson.replace(/[ --]/g,"");
-    // Fix trailing commas before } or ]
-    planJson = planJson.replace(/,(\s*[}\]])/g,"$1");
-    const plan = JSON.parse(planJson);
+    if(jStart===-1||jEnd===-1) throw new Error("No JSON found in response");
+    let planJson = text.slice(jStart,jEnd+1);
+    // Fix common AI JSON problems
+    planJson = planJson.replace(/,\s*}/g,"}").replace(/,\s*]/g,"]"); // trailing commas
+    planJson = planJson.replace(/’|‘/g,"").replace(/“|”/g,""); // smart quotes
+    planJson = planJson.replace(/[ --]/g,""); // control chars
+    // Try to parse, salvage if fails by stripping problem fields
+    let plan;
+    try { plan = JSON.parse(planJson); }
+    catch(e1) {
+      try {
+        // Strip potentially problematic long string values
+        planJson = planJson.replace(/"notes"\s*:\s*"[^"]*"/g,'"notes":""');
+        planJson = planJson.replace(/"tip"\s*:\s*"[^"]*"/g,'"tip":""');
+        plan = JSON.parse(planJson);
+      } catch(e2) { throw new Error("Could not parse plan JSON: "+e2.message); }
+    }
     // Ensure required fields exist
     if(!plan.id) plan.id = "custom_"+Date.now();
     if(!plan.custom) plan.custom = true;
@@ -1684,10 +1694,9 @@ function isSessionDoneByStrava(type, kmStr) {
     });
     if(gymActs.length>0) return true;
   }
+  // Final fallback - check completedSessions for any partial match
   return isSessionDone(type);
 }
-
-// ── HISTORY ───────────────────────────────────────────────────────────────────
 
 // ── HISTORY ───────────────────────────────────────────────────────────────────
 function renderHistory() {
