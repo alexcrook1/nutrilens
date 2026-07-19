@@ -163,6 +163,7 @@ select.input{appearance:none}
       <button class="tab active" data-tab="today" onclick="switchTab('today')">Today</button>
       <button class="tab" data-tab="activity" onclick="switchTab('activity')">Activity</button>
       <button class="tab" data-tab="nutrition" onclick="switchTab('nutrition')">Nutrition</button>
+      <button class="tab" data-tab="training" onclick="switchTab('training')">Training</button>
       <button class="tab" data-tab="body" onclick="switchTab('body')">Body</button>
       <button class="tab" data-tab="history" onclick="switchTab('history')">History</button>
     </div>
@@ -575,6 +576,135 @@ function latestW() {
 }
 function currentMode() { return MODES.find(m=>m.id===db.mode)||MODES[0]; }
 
+// ── Training Plans ────────────────────────────────────────────────────────────
+const TRAINING_PLANS = {
+  alps50k: {
+    id:"alps50k", name:"Bavarian Alps 50km", emoji:"🏔", color:"#f97316",
+    raceDate:"2026-08-28",
+    goal:"Complete a self-supported 50km mountain ultra in the Bavarian Alps — fit enough to enjoy it",
+    weeks:[
+      {week:1,label:"Foundation",dates:"Jul 19-25",theme:"Activate legs for elevation, establish routine",totalKm:48,
+        runs:[
+          {day:"Mon",type:"Easy run",target:"8km",notes:"Flat, conversational pace. Gauge how legs feel."},
+          {day:"Wed",type:"Hill repeats",target:"6km + 8x100m hill sprints",notes:"Find a hill. Drive knees up. Walk back down. Most important session this week."},
+          {day:"Fri",type:"Easy run",target:"6km",notes:"Recovery pace. Focus on breathing."},
+          {day:"Sat",type:"Long run",target:"18km",notes:"Include hills where possible. Eat and drink every 45 mins — practice race nutrition."},
+          {day:"Sun",type:"Back-to-back easy",target:"10km",notes:"Run on tired legs. Slow is fine. Trains body for consecutive days."},
+        ],
+        gym:{sessions:2,focus:"Upper body + core foundation",exercises:["Bench press 3x10","Incline press 3x10","Push-ups 3x15","Plank 3x45s","Dead bug 3x10"]},
+        swim:{distance:"800m",notes:"Maintain current base. Focus on relaxed breathing and sighting."},
+        keyTip:"Downhill running is harder than uphill for ultras. Practice controlled descents — lean forward slightly, small quick steps."
+      },
+      {week:2,label:"Build",dates:"Jul 26-Aug 1",theme:"Increase elevation and back-to-back volume",totalKm:58,
+        runs:[
+          {day:"Mon",type:"Recovery run",target:"6km flat",notes:"Easy after last week's back-to-back."},
+          {day:"Tue",type:"Hill session",target:"8km sustained climbs",notes:"Find a longer hill (400-500m). Run up at effort, walk down. 4-5 reps."},
+          {day:"Thu",type:"Trail/off-road",target:"10km",notes:"Uneven ground trains ankle stability — essential for Alps terrain."},
+          {day:"Sat",type:"Long run",target:"22km",notes:"Include 400m+ elevation if possible. Walk uphills — you will on race day."},
+          {day:"Sun",type:"Back-to-back",target:"12km easy",notes:"Slow. Fuel well before. This combo is your race preparation."},
+        ],
+        gym:{sessions:2,focus:"Push strength + core",exercises:["Bench press 4x8 heavier","Incline press 3x12","Dips 3x10","Plank variations 3x60s","Leg raises 3x15"]},
+        swim:{distance:"1000m",notes:"First distance jump. Split as 2x500m with rest if needed."},
+        keyTip:"Walk the uphills without guilt. In the Alps you WILL walk steep sections. Training this now builds your hiking muscles and saves energy."
+      },
+      {week:3,label:"Peak 1",dates:"Aug 2-8",theme:"Peak volume — biggest week of the plan",totalKm:70,
+        runs:[
+          {day:"Mon",type:"Easy",target:"8km",notes:"Shake out from last week."},
+          {day:"Wed",type:"Mountain simulation",target:"14km hilly",notes:"Run-walk the hills. Practice poles if you have them. Take snacks."},
+          {day:"Fri",type:"Easy",target:"8km",notes:"Prep legs for the big weekend."},
+          {day:"Sat",type:"Longest run",target:"26-28km",notes:"Slow and steady. Hills if possible. Eat every 45 mins. Test your race day food. This is your confidence builder."},
+          {day:"Sun",type:"Back-to-back",target:"14km",notes:"Tough but necessary. You'll feel good that you did it."},
+        ],
+        gym:{sessions:1,focus:"Maintain — don't fatigue",exercises:["Push-ups 3x20","Incline press 3x10 moderate","Plank 3x60s","Side plank 2x45s"]},
+        swim:{distance:"1100m",notes:"Keep it easy this week — big run volume. Just maintain the habit."},
+        keyTip:"Nutrition practice is non-negotiable. On your long run test exactly what you plan to eat on race day. Alpine ultras punish people who don't eat early enough."
+      },
+      {week:4,label:"Peak 2",dates:"Aug 9-15",theme:"Consolidate fitness, sharpen elevation work",totalKm:56,
+        runs:[
+          {day:"Mon",type:"Recovery",target:"6km very easy",notes:"Your legs earned this."},
+          {day:"Tue",type:"Strength run",target:"10km hilly",notes:"Push the uphills. You should feel stronger than week 1."},
+          {day:"Thu",type:"Tempo run",target:"8km with 20 min at effort",notes:"Your only speed session of the plan. Flat or gentle downhill."},
+          {day:"Sat",type:"Long run",target:"22km",notes:"Back off from week 3. Still hilly. Focus on even effort."},
+          {day:"Sun",type:"Easy",target:"10km",notes:"Final back-to-back of the plan. Enjoy it."},
+        ],
+        gym:{sessions:2,focus:"Upper body peak + quad strength",exercises:["Bench press 4x8","Incline press 3x10","Bulgarian split squats 3x10 each","Plank 3x60s","Push-ups to failure"]},
+        swim:{distance:"1200m",notes:"Target distance this week. 1.2km — close to a mile. Note how you feel."},
+        keyTip:"Your quads hurt most on race day descents. Bulgarian split squats directly address this. Do them even if legs are tired."
+      },
+      {week:5,label:"Taper",dates:"Aug 16-22",theme:"Reduce volume, maintain sharpness",totalKm:35,
+        runs:[
+          {day:"Mon",type:"Easy",target:"6km",notes:"Feel free and light."},
+          {day:"Wed",type:"Hills",target:"8km with hill reps",notes:"Keep legs sharp but don't tire them."},
+          {day:"Fri",type:"Easy",target:"5km",notes:"Short and sweet."},
+          {day:"Sat",type:"Medium long",target:"16km",notes:"Last long run. Enjoyable pace. Confirm nutrition plan."},
+        ],
+        gym:{sessions:1,focus:"Maintenance only",exercises:["Push-ups 2x15","Bench press light 2x10","Plank 2x60s"]},
+        swim:{distance:"1400m",notes:"Push for 1.5km if feeling good — you may surprise yourself."},
+        keyTip:"Taper anxiety is real — you'll feel sluggish and doubt your fitness. This is normal. The fitness is there. Trust the training."
+      },
+      {week:6,label:"Race week",dates:"Aug 23-28",theme:"Fresh legs, sharp mind, race day",totalKm:9,
+        runs:[
+          {day:"Mon",type:"Easy shakeout",target:"5km",notes:"Light and easy."},
+          {day:"Wed",type:"Short strides",target:"4km + 6x20s strides",notes:"Wake the legs up. Nothing more."},
+          {day:"Fri",type:"Rest",target:"Active rest / walk",notes:"Stay off feet as much as possible."},
+          {day:"Sat Aug 28",type:"🏔 RACE DAY",target:"50km Bavarian Alps",notes:"Start slow. Walk all steep uphills. Eat before you're hungry. Drink before you're thirsty. Enjoy every view."},
+        ],
+        gym:{sessions:0,focus:"Rest",exercises:[]},
+        swim:{distance:"0",notes:"Skip swim this week. Fresh legs only."},
+        keyTip:"Race nutrition: eat every 40-45 mins from the start even if not hungry. Aim for 200-250 kcal/hour. Your Cyprus heat training will help in the Alps."
+      }
+    ]
+  },
+  swimming: {
+    id:"swimming", name:"Open Water 1 Mile", emoji:"🏊", color:"#38bdf8",
+    goal:"Build from 800m to 1 mile (1600m) in open water",
+    weeks:[
+      {week:1,dates:"Jul 19-25",target_m:800,notes:"Maintain base. Focus on sighting every 10 strokes and relaxed breathing."},
+      {week:2,dates:"Jul 26-Aug 1",target_m:1000,notes:"First distance jump. Split as 2x500m with 60s rest if needed."},
+      {week:3,dates:"Aug 2-8",target_m:1100,notes:"Keep it easy — big run week. Just stay in the habit."},
+      {week:4,dates:"Aug 9-15",target_m:1200,notes:"1.2km. You're now in the zone between 800m and a mile."},
+      {week:5,dates:"Aug 16-22",target_m:1400,notes:"Push for 1.5km if feeling good. Use landmarks to measure distance."},
+      {week:6,dates:"Aug 23-29",target_m:1600,notes:"🎯 Target: 1 mile. Go for it. You've done the work."},
+    ]
+  },
+  strength: {
+    id:"strength", name:"Abs & Pectorals", emoji:"💪", color:"#a78bfa",
+    goal:"Visible abs and developed pectorals — also supports Alps descents and swimming.",
+    sessionsPerWeek:2,
+    workouts:[
+      {name:"Push Day",exercises:[
+        {name:"Bench press",sets:4,reps:"8-10",notes:"Increase weight when 10 reps feels easy"},
+        {name:"Incline bench press",sets:3,reps:"10-12",notes:"Targets upper chest"},
+        {name:"Wide push-ups",sets:3,reps:"15-20",notes:"To failure on last set"},
+        {name:"Dips",sets:3,reps:"10-12",notes:"Use chair or parallel bars"},
+        {name:"Plank",sets:3,reps:"60s",notes:"Perfect form over time"},
+        {name:"Dead bug",sets:3,reps:"10 each side",notes:"Core stability essential for Alps terrain"},
+      ]},
+      {name:"Core Day",exercises:[
+        {name:"Hollow body hold",sets:3,reps:"30s",notes:"Best abs exercise. Lower back must stay flat."},
+        {name:"Leg raises",sets:3,reps:"15",notes:"Slow and controlled"},
+        {name:"Side plank",sets:3,reps:"45s each side",notes:"Obliques — key for trail stability"},
+        {name:"Mountain climbers",sets:3,reps:"20 each leg",notes:"Cardio + core"},
+        {name:"Incline press",sets:3,reps:"12",notes:"Keep chest work going"},
+        {name:"Push-ups to failure",sets:2,reps:"Max",notes:"Finish strong"},
+      ]}
+    ]
+  }
+};
+
+function currentTrainingWeek() {
+  const start = new Date("2026-07-19");
+  const now = new Date();
+  const diff = Math.floor((now - start) / (7*24*60*60*1000));
+  return Math.min(Math.max(diff + 1, 1), 6);
+}
+
+function daysToRace() {
+  const race = new Date("2026-08-28");
+  const now = new Date();
+  return Math.max(0, Math.ceil((race - now) / (24*60*60*1000)));
+}
+
 // ── Tab ───────────────────────────────────────────────────────────────────────
 let currentTab="today", pendingPhoto=null, pendingLog=null, logType="food", selEmoji="💪", selMET=5;
 
@@ -648,6 +778,7 @@ function render() {
   if(currentTab==="today")     el.innerHTML=renderToday();
   if(currentTab==="activity")  el.innerHTML=renderActivity();
   if(currentTab==="nutrition") el.innerHTML=renderNutrition();
+  if(currentTab==="training")  el.innerHTML=renderTraining();
   if(currentTab==="body")      el.innerHTML=renderBody();
   if(currentTab==="history")   el.innerHTML=renderHistory();
   document.querySelectorAll(".backdrop").forEach(b=>{b.onclick=e=>{if(e.target===b)b.style.display="none";};});
@@ -733,6 +864,24 @@ function renderToday() {
   </div>`;
 
   // Insight
+  // Alps race countdown on Today screen
+  const dtr = daysToRace();
+  if(dtr > 0 && dtr <= 40) {
+    const cw = currentTrainingWeek();
+    const alpsWeek = TRAINING_PLANS.alps50k.weeks[cw-1];
+    html+=`<div style="background:linear-gradient(135deg,#1a0a00,#2d1200);border:1px solid rgba(249,115,22,.3);border-radius:14px;padding:12px 14px;margin:12px 14px 0;display:flex;align-items:center;gap:12px" onclick="switchTab('training');document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab==='training'))">
+      <div style="font-size:28px">🏔</div>
+      <div style="flex:1">
+        <div style="font-size:11px;font-weight:700;color:var(--orange)">BAVARIAN ALPS 50KM</div>
+        <div style="font-size:12px;color:var(--text);margin-top:2px">Week ${cw}: ${alpsWeek?alpsWeek.label:""} — tap to view plan</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:24px;font-weight:700;color:var(--orange);line-height:1">${dtr}</div>
+        <div style="font-size:9px;color:var(--subtle)">days</div>
+      </div>
+    </div>`;
+  }
+
   if(db.insight && db.insightDate===today()) {
     html+=`<div class="card"><div class="insight"><div class="insight-label">Today's Insight</div><div style="font-size:20px;margin-bottom:6px">💡</div><div class="insight-text">${db.insight}</div></div></div>`;
   }
@@ -1072,6 +1221,186 @@ function renderBody() {
   </div>`;
 
   return html;
+}
+
+// ── TRAINING ─────────────────────────────────────────────────────────────────
+function renderTraining() {
+  const currentWeek = currentTrainingWeek();
+  const dtr = daysToRace();
+  let html = "";
+
+  // Race countdown banner
+  html+=`<div style="background:linear-gradient(135deg,#1a0a00,#2d1200);border:1px solid rgba(249,115,22,.4);border-radius:18px;padding:16px;margin:12px 14px 0">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--orange);margin-bottom:4px">🏔 Bavarian Alps 50km</div>
+        <div style="font-size:13px;color:var(--text)">Aug 28 · Self-supported · Bavarian Alps</div>
+      </div>
+      <div style="text-align:center;background:rgba(249,115,22,.15);border-radius:12px;padding:10px 16px">
+        <div style="font-size:32px;font-weight:700;color:var(--orange);line-height:1">${dtr}</div>
+        <div style="font-size:10px;color:var(--subtle)">days to go</div>
+      </div>
+    </div>
+    <div style="margin-top:10px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--subtle);margin-bottom:4px">
+        <span>Week ${currentWeek} of 6</span><span>${Math.round((currentWeek/6)*100)}% through plan</span>
+      </div>
+      <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${Math.round((currentWeek/6)*100)}%;background:var(--orange);border-radius:3px"></div>
+      </div>
+    </div>
+  </div>`;
+
+  // Plan selector tabs
+  html+=`<div style="display:flex;gap:8px;padding:12px 14px 0;overflow-x:auto">
+    ${Object.values(TRAINING_PLANS).map(p=>`
+      <button onclick="document.querySelectorAll('.plan-tab').forEach(t=>t.classList.remove('active'));this.classList.add('active');document.querySelectorAll('.plan-section').forEach(s=>s.style.display='none');document.getElementById('plan-${p.id}').style.display='block'"
+        class="plan-tab ${p.id==='alps50k'?'active':''}"
+        style="flex-shrink:0;padding:8px 14px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:${p.id==='alps50k'?"rgba(249,115,22,.2)":"var(--muted)"};color:${p.id==='alps50k'?"var(--orange)":"var(--subtle)"}">
+        ${p.emoji} ${p.name}
+      </button>`).join("")}
+  </div>`;
+
+  // Alps 50k plan
+  const alps = TRAINING_PLANS.alps50k;
+  const alpsWeek = alps.weeks[currentWeek-1];
+  html+=`<div class="plan-section" id="plan-alps50k">`;
+
+  // Current week card
+  html+=`<div class="card" style="border-color:rgba(249,115,22,.3)">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+      <div>
+        <div class="card-title" style="margin:0">Week ${alpsWeek.week} — ${alpsWeek.label}</div>
+        <div style="font-size:12px;color:var(--secondary);margin-top:3px">${alpsWeek.dates}</div>
+      </div>
+      <div style="text-align:center;background:rgba(249,115,22,.1);border-radius:10px;padding:6px 10px">
+        <div style="font-size:18px;font-weight:700;color:var(--orange)">${alpsWeek.totalKm}km</div>
+        <div style="font-size:9px;color:var(--subtle)">target</div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--secondary);margin-bottom:12px;font-style:italic">${alpsWeek.theme}</div>
+    ${alpsWeek.runs.map(r=>`
+      <div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
+        <div style="width:36px;font-size:11px;font-weight:700;color:var(--orange);flex-shrink:0;padding-top:1px">${r.day}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--bright)">${r.type} <span style="color:var(--purple2)">${r.target}</span></div>
+          <div style="font-size:11px;color:var(--subtle);margin-top:2px">${r.notes}</div>
+        </div>
+        <button onclick="logPlanSession('${r.type} ${r.target}')" style="background:var(--muted);border:none;border-radius:8px;padding:5px 10px;font-size:11px;color:var(--secondary);cursor:pointer;flex-shrink:0;align-self:center">Log</button>
+      </div>`).join("")}
+    <div style="margin-top:12px;background:rgba(249,115,22,.08);border-radius:10px;padding:10px 12px">
+      <div style="font-size:10px;font-weight:700;color:var(--orange);margin-bottom:4px">💡 This week's key tip</div>
+      <div style="font-size:12px;color:var(--text);line-height:1.6">${alpsWeek.keyTip}</div>
+    </div>
+  </div>`;
+
+  // Gym this week
+  if(alpsWeek.gym.sessions > 0) {
+    html+=`<div class="card">
+      <div class="card-title">💪 Gym this week — ${alpsWeek.gym.focus}</div>
+      <div class="xs c-subtle mb8">${alpsWeek.gym.sessions} session${alpsWeek.gym.sessions>1?"s":""} recommended</div>
+      ${alpsWeek.gym.exercises.map(e=>`<div class="stat-row xs"><span>${e}</span></div>`).join("")}
+    </div>`;
+  }
+
+  // Swim this week
+  if(alpsWeek.swim.distance !== "0") {
+    const swimPlan = TRAINING_PLANS.swimming.weeks[currentWeek-1];
+    html+=`<div class="card" style="border-color:rgba(56,189,248,.2)">
+      <div class="card-title">🏊 Swim this week</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:24px;font-weight:700;color:var(--blue)">${swimPlan?swimPlan.target_m:alpsWeek.swim.distance}m</div>
+          <div class="xs c-subtle mt4">${alpsWeek.swim.notes}</div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // All weeks overview
+  html+=`<div class="card">
+    <div class="card-title">Plan overview</div>
+    ${alps.weeks.map(w=>`
+      <div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);align-items:center;${w.week===currentWeek?"background:rgba(249,115,22,.05);margin:0 -4px;padding:9px 4px;border-radius:8px":""}">
+        <div style="width:20px;height:20px;border-radius:50%;background:${w.week<currentWeek?"var(--green)":w.week===currentWeek?"var(--orange)":"var(--muted)"};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <span style="font-size:10px;color:#fff;font-weight:700">${w.week<currentWeek?"✓":w.week}</span>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:600;color:${w.week===currentWeek?"var(--orange)":"var(--text)"}">${w.label} <span style="font-weight:400;color:var(--subtle)">${w.dates}</span></div>
+          <div style="font-size:11px;color:var(--subtle)">${w.theme}</div>
+        </div>
+        <div style="font-size:12px;font-weight:700;color:var(--subtle)">${w.totalKm}km</div>
+      </div>`).join("")}
+  </div>`;
+
+  html+=`</div>`; // end alps50k
+
+  // Swimming plan section
+  const swim = TRAINING_PLANS.swimming;
+  const swimWeek = swim.weeks[currentWeek-1];
+  html+=`<div class="plan-section" id="plan-swimming" style="display:none">
+    <div class="card" style="border-color:rgba(56,189,248,.3)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div class="card-title" style="margin:0">Week ${currentWeek} target</div>
+        <div style="font-size:28px;font-weight:700;color:var(--blue)">${swimWeek.target_m}m</div>
+      </div>
+      <div class="prog-track">
+        <div class="prog-fill" style="width:${Math.round((swimWeek.target_m/1600)*100)}%;background:var(--blue)"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--subtle);margin-top:4px">
+        <span>800m start</span><span>1600m goal (1 mile)</span>
+      </div>
+      <div style="margin-top:10px;font-size:13px;color:var(--text)">${swimWeek.notes}</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Weekly targets</div>
+      ${swim.weeks.map(w=>`
+        <div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);align-items:center">
+          <div style="width:20px;height:20px;border-radius:50%;background:${w.week<currentWeek?"var(--green)":w.week===currentWeek?"var(--blue)":"var(--muted)"};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <span style="font-size:10px;color:#fff;font-weight:700">${w.week<currentWeek?"✓":w.week}</span>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:12px;color:${w.week===currentWeek?"var(--blue)":"var(--text)"}">Week ${w.week} · ${w.dates}</div>
+            <div style="font-size:11px;color:var(--subtle)">${w.notes}</div>
+          </div>
+          <div style="font-size:13px;font-weight:700;color:${w.week===currentWeek?"var(--blue)":"var(--subtle)"}">${w.target_m}m</div>
+        </div>`).join("")}
+    </div>
+  </div>`;
+
+  // Strength plan section
+  const str = TRAINING_PLANS.strength;
+  html+=`<div class="plan-section" id="plan-strength" style="display:none">
+    <div class="card" style="border-color:rgba(167,139,250,.3)">
+      <div class="card-title">${str.emoji} ${str.name}</div>
+      <div style="font-size:12px;color:var(--secondary);margin-bottom:12px">${str.goal}</div>
+      <div style="font-size:13px;color:var(--text)">📅 <strong>${str.sessionsPerWeek} sessions per week</strong> — alternate Push Day and Core Day</div>
+    </div>
+    ${str.workouts.map(w=>`
+      <div class="card">
+        <div class="card-title">${w.name}</div>
+        ${w.exercises.map(e=>`
+          <div style="padding:9px 0;border-bottom:1px solid var(--border)">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div style="font-size:13px;font-weight:600;color:var(--bright)">${e.name}</div>
+              <div style="font-size:12px;color:var(--purple2);font-weight:600;flex-shrink:0;margin-left:8px">${e.sets}×${e.reps}</div>
+            </div>
+            <div style="font-size:11px;color:var(--subtle);margin-top:2px">${e.notes}</div>
+          </div>`).join("")}
+        <button onclick="logPlanSession('${w.name} strength session')" style="background:rgba(167,139,250,.15);color:var(--purple2);border:1px solid rgba(167,139,250,.3);border-radius:10px;padding:10px;font-size:13px;font-weight:600;cursor:pointer;width:100%;margin-top:12px">Log this session</button>
+      </div>`).join("")}
+  </div>`;
+
+  return html;
+}
+
+function logPlanSession(name) {
+  // Open activity modal pre-filled with session name
+  openModal("actModal");
+  setTimeout(()=>{
+    document.getElementById("actName").value = name;
+    document.getElementById("actDur").focus();
+  }, 100);
 }
 
 // ── HISTORY ───────────────────────────────────────────────────────────────────
