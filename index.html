@@ -134,6 +134,18 @@ select.input{appearance:none}
 .hbar{flex:1;border-radius:3px 3px 0 0;transition:height .4s ease;min-height:3px}
 .hbar-label{font-size:9px;color:var(--subtle);text-align:center;margin-top:4px}
 .empty{text-align:center;color:var(--muted);font-size:13px;padding:16px 0}
+/* Training tab */
+.plan-pill{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;transition:all .2s}
+.plan-pill.active{color:#fff}
+.session-tile{background:var(--surface2);border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer;transition:background .15s}
+.session-tile:active{background:var(--muted)}
+.session-tile.completed{opacity:.5}
+.week-header{display:flex;justify-content:space-between;align-items:center;padding:10px 0;cursor:pointer;border-bottom:1px solid var(--border)}
+.week-header.current{color:var(--orange)}
+.week-body{overflow:hidden;transition:max-height .3s ease}
+.exercise-row{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border)}
+.plan-insight{background:linear-gradient(135deg,#0d1f35,#0d1a2a);border:1px solid rgba(56,189,248,.2);border-radius:12px;padding:12px;margin-top:10px}
+.countdown-banner{background:linear-gradient(135deg,#1a0a00,#2d1200);border:1px solid rgba(249,115,22,.35);border-radius:16px;padding:14px;margin:12px 14px 0}
 /* Drink type pill */
 .type-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
 .type-pill{background:var(--muted);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;border:none;color:var(--secondary)}
@@ -469,6 +481,24 @@ select.input{appearance:none}
   </div>
 </div>
 
+<!-- NEW PLAN MODAL -->
+<div class="backdrop" id="newPlanModal" style="display:none">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title">✨ New training plan</div>
+      <button class="modal-close" onclick="closeModal('newPlanModal')">×</button>
+    </div>
+    <div class="xs c-subtle mb12">Describe your goal and AI will build a personalised plan based on your current fitness, schedule and data.</div>
+    <div class="mb12">
+      <label class="label">What do you want to achieve?</label>
+      <textarea class="input" id="newPlanDesc" rows="3" placeholder="e.g. Play competitive tennis — improve movement, stamina and consistency over 8 weeks&#10;e.g. Complete a sprint triathlon in October&#10;e.g. Get into the gym consistently and build strength over 6 weeks"></textarea>
+    </div>
+    <div id="newPlanResult" style="display:none"></div>
+    <div id="newPlanErr" class="err" style="display:none"></div>
+    <button class="btn btn-primary btn-full" onclick="generateNewPlan()" id="newPlanBtn">Generate plan with AI</button>
+  </div>
+</div>
+
 <!-- MODE MODAL -->
 <div class="backdrop" id="modeModal" style="display:none">
   <div class="modal">
@@ -737,6 +767,13 @@ if(!db.profile.startWeight) {
     db.profile.startWeight = db.profile.weight;
   }
   save();
+}
+
+// Restore custom plans from db
+if(db.customPlans) {
+  Object.values(db.customPlans).forEach(plan => {
+    TRAINING_PLANS[plan.id] = plan;
+  });
 }
 
 checkStravaCallback();
@@ -1224,184 +1261,393 @@ function renderBody() {
 }
 
 // ── TRAINING ─────────────────────────────────────────────────────────────────
+let activePlanId = "alps50k";
+let expandedWeek = currentTrainingWeek();
+
 function renderTraining() {
-  const currentWeek = currentTrainingWeek();
   const dtr = daysToRace();
+  const cw = currentTrainingWeek();
   let html = "";
 
-  // Race countdown banner
-  html+=`<div style="background:linear-gradient(135deg,#1a0a00,#2d1200);border:1px solid rgba(249,115,22,.4);border-radius:18px;padding:16px;margin:12px 14px 0">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <div>
-        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--orange);margin-bottom:4px">🏔 Bavarian Alps 50km</div>
-        <div style="font-size:13px;color:var(--text)">Aug 28 · Self-supported · Bavarian Alps</div>
+  // ── Race countdown banner ──
+  if(dtr > 0) {
+    const alpsWeek = TRAINING_PLANS.alps50k.weeks[cw-1];
+    html+=`<div class="countdown-banner">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--orange)">🏔 Bavarian Alps 50km</div>
+          <div style="font-size:12px;color:var(--secondary);margin-top:2px">Aug 28 · Self-supported · Bavaria</div>
+        </div>
+        <div style="text-align:center;background:rgba(249,115,22,.15);border-radius:10px;padding:8px 12px">
+          <div style="font-size:28px;font-weight:700;color:var(--orange);line-height:1">${dtr}</div>
+          <div style="font-size:9px;color:var(--subtle)">days to go</div>
+        </div>
       </div>
-      <div style="text-align:center;background:rgba(249,115,22,.15);border-radius:12px;padding:10px 16px">
-        <div style="font-size:32px;font-weight:700;color:var(--orange);line-height:1">${dtr}</div>
-        <div style="font-size:10px;color:var(--subtle)">days to go</div>
+      <div style="height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden">
+        <div style="height:100%;width:${Math.round((cw/6)*100)}%;background:var(--orange);border-radius:2px"></div>
       </div>
-    </div>
-    <div style="margin-top:10px">
-      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--subtle);margin-bottom:4px">
-        <span>Week ${currentWeek} of 6</span><span>${Math.round((currentWeek/6)*100)}% through plan</span>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--subtle);margin-top:4px">
+        <span>Week ${cw} of 6 · ${alpsWeek?alpsWeek.label:""}</span>
+        <span>${Math.round((cw/6)*100)}% complete</span>
       </div>
-      <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
-        <div style="height:100%;width:${Math.round((currentWeek/6)*100)}%;background:var(--orange);border-radius:3px"></div>
-      </div>
-    </div>
-  </div>`;
+    </div>`;
+  }
 
-  // Plan selector tabs
-  html+=`<div style="display:flex;gap:8px;padding:12px 14px 0;overflow-x:auto">
+  // ── Data-driven plan insights ──
+  const planInsight = getPlanInsight();
+  if(planInsight) {
+    html+=`<div class="card" style="margin-top:12px">
+      <div class="plan-insight">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);margin-bottom:6px">📊 Your data says</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.6">${planInsight}</div>
+      </div>
+    </div>`;
+  }
+
+  // ── Plan selector ──
+  html+=`<div style="display:flex;gap:6px;padding:12px 14px 0;overflow-x:auto;scrollbar-width:none">
     ${Object.values(TRAINING_PLANS).map(p=>`
-      <button onclick="document.querySelectorAll('.plan-tab').forEach(t=>t.classList.remove('active'));this.classList.add('active');document.querySelectorAll('.plan-section').forEach(s=>s.style.display='none');document.getElementById('plan-${p.id}').style.display='block'"
-        class="plan-tab ${p.id==='alps50k'?'active':''}"
-        style="flex-shrink:0;padding:8px 14px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:${p.id==='alps50k'?"rgba(249,115,22,.2)":"var(--muted)"};color:${p.id==='alps50k'?"var(--orange)":"var(--subtle)"}">
+      <button class="plan-pill ${activePlanId===p.id?"active":""}"
+        style="${activePlanId===p.id?`background:${p.color}`:"background:var(--muted);color:var(--subtle)"}"
+        onclick="activePlanId='${p.id}';render()">
         ${p.emoji} ${p.name}
       </button>`).join("")}
+    <button class="plan-pill" style="background:var(--muted);color:var(--subtle)" onclick="openNewPlanModal()">
+      ＋ New plan
+    </button>
   </div>`;
 
-  // Alps 50k plan
-  const alps = TRAINING_PLANS.alps50k;
-  const alpsWeek = alps.weeks[currentWeek-1];
-  html+=`<div class="plan-section" id="plan-alps50k">`;
+  // ── Active plan content ──
+  const plan = TRAINING_PLANS[activePlanId];
+  if(!plan) return html;
 
-  // Current week card
-  html+=`<div class="card" style="border-color:rgba(249,115,22,.3)">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-      <div>
-        <div class="card-title" style="margin:0">Week ${alpsWeek.week} — ${alpsWeek.label}</div>
-        <div style="font-size:12px;color:var(--secondary);margin-top:3px">${alpsWeek.dates}</div>
+  html+=`<div style="margin:12px 14px 0">`;
+
+  // Plan header
+  html+=`<div class="card" style="border-color:${plan.color}44;margin:0 0 10px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div style="flex:1">
+        <div style="font-size:16px;font-weight:700;color:var(--bright)">${plan.emoji} ${plan.name}</div>
+        <div style="font-size:12px;color:var(--secondary);margin-top:4px;line-height:1.5">${plan.goal}</div>
       </div>
-      <div style="text-align:center;background:rgba(249,115,22,.1);border-radius:10px;padding:6px 10px">
-        <div style="font-size:18px;font-weight:700;color:var(--orange)">${alpsWeek.totalKm}km</div>
-        <div style="font-size:9px;color:var(--subtle)">target</div>
-      </div>
-    </div>
-    <div style="font-size:12px;color:var(--secondary);margin-bottom:12px;font-style:italic">${alpsWeek.theme}</div>
-    ${alpsWeek.runs.map(r=>`
-      <div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
-        <div style="width:36px;font-size:11px;font-weight:700;color:var(--orange);flex-shrink:0;padding-top:1px">${r.day}</div>
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:600;color:var(--bright)">${r.type} <span style="color:var(--purple2)">${r.target}</span></div>
-          <div style="font-size:11px;color:var(--subtle);margin-top:2px">${r.notes}</div>
-        </div>
-        <button onclick="logPlanSession('${r.type} ${r.target}')" style="background:var(--muted);border:none;border-radius:8px;padding:5px 10px;font-size:11px;color:var(--secondary);cursor:pointer;flex-shrink:0;align-self:center">Log</button>
-      </div>`).join("")}
-    <div style="margin-top:12px;background:rgba(249,115,22,.08);border-radius:10px;padding:10px 12px">
-      <div style="font-size:10px;font-weight:700;color:var(--orange);margin-bottom:4px">💡 This week's key tip</div>
-      <div style="font-size:12px;color:var(--text);line-height:1.6">${alpsWeek.keyTip}</div>
+      <button onclick="deletePlan('${plan.id}')" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0 0 0 8px">×</button>
     </div>
   </div>`;
 
-  // Gym this week
-  if(alpsWeek.gym.sessions > 0) {
-    html+=`<div class="card">
-      <div class="card-title">💪 Gym this week — ${alpsWeek.gym.focus}</div>
-      <div class="xs c-subtle mb8">${alpsWeek.gym.sessions} session${alpsWeek.gym.sessions>1?"s":""} recommended</div>
-      ${alpsWeek.gym.exercises.map(e=>`<div class="stat-row xs"><span>${e}</span></div>`).join("")}
-    </div>`;
+  // Alps 50k — week by week
+  if(activePlanId === "alps50k") {
+    html += renderAlpsPlan(plan, cw);
+  }
+  // Swimming — simple progress view
+  else if(activePlanId === "swimming") {
+    html += renderSwimPlan(plan, cw);
+  }
+  // Strength — workout cards
+  else if(activePlanId === "strength") {
+    html += renderStrengthPlan(plan);
+  }
+  // Custom AI plans
+  else if(plan.custom) {
+    html += renderCustomPlan(plan, cw);
   }
 
-  // Swim this week
-  if(alpsWeek.swim.distance !== "0") {
-    const swimPlan = TRAINING_PLANS.swimming.weeks[currentWeek-1];
-    html+=`<div class="card" style="border-color:rgba(56,189,248,.2)">
-      <div class="card-title">🏊 Swim this week</div>
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <div style="font-size:24px;font-weight:700;color:var(--blue)">${swimPlan?swimPlan.target_m:alpsWeek.swim.distance}m</div>
-          <div class="xs c-subtle mt4">${alpsWeek.swim.notes}</div>
-        </div>
-      </div>
-    </div>`;
-  }
-
-  // All weeks overview
-  html+=`<div class="card">
-    <div class="card-title">Plan overview</div>
-    ${alps.weeks.map(w=>`
-      <div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);align-items:center;${w.week===currentWeek?"background:rgba(249,115,22,.05);margin:0 -4px;padding:9px 4px;border-radius:8px":""}">
-        <div style="width:20px;height:20px;border-radius:50%;background:${w.week<currentWeek?"var(--green)":w.week===currentWeek?"var(--orange)":"var(--muted)"};display:flex;align-items:center;justify-content:center;flex-shrink:0">
-          <span style="font-size:10px;color:#fff;font-weight:700">${w.week<currentWeek?"✓":w.week}</span>
-        </div>
-        <div style="flex:1">
-          <div style="font-size:12px;font-weight:600;color:${w.week===currentWeek?"var(--orange)":"var(--text)"}">${w.label} <span style="font-weight:400;color:var(--subtle)">${w.dates}</span></div>
-          <div style="font-size:11px;color:var(--subtle)">${w.theme}</div>
-        </div>
-        <div style="font-size:12px;font-weight:700;color:var(--subtle)">${w.totalKm}km</div>
-      </div>`).join("")}
-  </div>`;
-
-  html+=`</div>`; // end alps50k
-
-  // Swimming plan section
-  const swim = TRAINING_PLANS.swimming;
-  const swimWeek = swim.weeks[currentWeek-1];
-  html+=`<div class="plan-section" id="plan-swimming" style="display:none">
-    <div class="card" style="border-color:rgba(56,189,248,.3)">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <div class="card-title" style="margin:0">Week ${currentWeek} target</div>
-        <div style="font-size:28px;font-weight:700;color:var(--blue)">${swimWeek.target_m}m</div>
-      </div>
-      <div class="prog-track">
-        <div class="prog-fill" style="width:${Math.round((swimWeek.target_m/1600)*100)}%;background:var(--blue)"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--subtle);margin-top:4px">
-        <span>800m start</span><span>1600m goal (1 mile)</span>
-      </div>
-      <div style="margin-top:10px;font-size:13px;color:var(--text)">${swimWeek.notes}</div>
-    </div>
-    <div class="card">
-      <div class="card-title">Weekly targets</div>
-      ${swim.weeks.map(w=>`
-        <div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);align-items:center">
-          <div style="width:20px;height:20px;border-radius:50%;background:${w.week<currentWeek?"var(--green)":w.week===currentWeek?"var(--blue)":"var(--muted)"};display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <span style="font-size:10px;color:#fff;font-weight:700">${w.week<currentWeek?"✓":w.week}</span>
-          </div>
-          <div style="flex:1">
-            <div style="font-size:12px;color:${w.week===currentWeek?"var(--blue)":"var(--text)"}">Week ${w.week} · ${w.dates}</div>
-            <div style="font-size:11px;color:var(--subtle)">${w.notes}</div>
-          </div>
-          <div style="font-size:13px;font-weight:700;color:${w.week===currentWeek?"var(--blue)":"var(--subtle)"}">${w.target_m}m</div>
-        </div>`).join("")}
-    </div>
-  </div>`;
-
-  // Strength plan section
-  const str = TRAINING_PLANS.strength;
-  html+=`<div class="plan-section" id="plan-strength" style="display:none">
-    <div class="card" style="border-color:rgba(167,139,250,.3)">
-      <div class="card-title">${str.emoji} ${str.name}</div>
-      <div style="font-size:12px;color:var(--secondary);margin-bottom:12px">${str.goal}</div>
-      <div style="font-size:13px;color:var(--text)">📅 <strong>${str.sessionsPerWeek} sessions per week</strong> — alternate Push Day and Core Day</div>
-    </div>
-    ${str.workouts.map(w=>`
-      <div class="card">
-        <div class="card-title">${w.name}</div>
-        ${w.exercises.map(e=>`
-          <div style="padding:9px 0;border-bottom:1px solid var(--border)">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start">
-              <div style="font-size:13px;font-weight:600;color:var(--bright)">${e.name}</div>
-              <div style="font-size:12px;color:var(--purple2);font-weight:600;flex-shrink:0;margin-left:8px">${e.sets}×${e.reps}</div>
-            </div>
-            <div style="font-size:11px;color:var(--subtle);margin-top:2px">${e.notes}</div>
-          </div>`).join("")}
-        <button onclick="logPlanSession('${w.name} strength session')" style="background:rgba(167,139,250,.15);color:var(--purple2);border:1px solid rgba(167,139,250,.3);border-radius:10px;padding:10px;font-size:13px;font-weight:600;cursor:pointer;width:100%;margin-top:12px">Log this session</button>
-      </div>`).join("")}
-  </div>`;
-
+  html+=`</div>`;
   return html;
 }
 
+function renderAlpsPlan(plan, cw) {
+  let html = "";
+  plan.weeks.forEach(w=>{
+    const isCurrent = w.week === cw;
+    const isPast = w.week < cw;
+    const isOpen = w.week === expandedWeek;
+
+    html+=`<div style="background:var(--surface);border:1px solid ${isCurrent?"rgba(249,115,22,.4)":isPast?"rgba(45,212,191,.2)":"var(--border)"};border-radius:14px;margin-bottom:8px;overflow:hidden">
+      <div class="week-header ${isCurrent?"current":""}" style="padding:12px 14px"
+        onclick="expandedWeek=${isOpen?-1:w.week};render()">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:24px;height:24px;border-radius:50%;background:${isPast?"var(--green)":isCurrent?"var(--orange)":"var(--muted)"};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <span style="font-size:10px;color:#fff;font-weight:700">${isPast?"✓":w.week}</span>
+          </div>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:${isCurrent?"var(--orange)":isPast?"var(--green)":"var(--text)"}">${w.label}</div>
+            <div style="font-size:11px;color:var(--subtle)">${w.dates} · ${w.totalKm}km target</div>
+          </div>
+        </div>
+        <div style="font-size:16px;color:var(--subtle)">${isOpen?"▲":"▼"}</div>
+      </div>
+      ${isOpen?`<div style="padding:0 14px 14px;border-top:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--secondary);padding:10px 0;font-style:italic">${w.theme}</div>
+        ${w.runs.map(r=>`
+          <div class="session-tile" onclick="logPlanSession('${r.type} ${r.target}')">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div style="flex:1">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+                  <span style="font-size:10px;font-weight:700;color:var(--orange);background:rgba(249,115,22,.1);padding:2px 6px;border-radius:6px">${r.day}</span>
+                  <span style="font-size:13px;font-weight:600;color:var(--bright)">${r.type}</span>
+                </div>
+                <div style="font-size:12px;color:var(--purple2);font-weight:600">${r.target}</div>
+                <div style="font-size:11px;color:var(--subtle);margin-top:3px">${r.notes}</div>
+              </div>
+              <div style="background:var(--purple);color:#fff;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;flex-shrink:0;margin-left:8px;align-self:center">Log</div>
+            </div>
+          </div>`).join("")}
+        ${w.gym.sessions>0?`<div style="background:rgba(167,139,250,.08);border-radius:10px;padding:10px 12px;margin-top:8px">
+          <div style="font-size:10px;font-weight:700;color:var(--purple2);margin-bottom:6px">💪 GYM — ${w.gym.focus}</div>
+          ${w.gym.exercises.map(e=>`<div style="font-size:11px;color:var(--secondary);padding:2px 0">· ${e}</div>`).join("")}
+        </div>`:""}
+        ${w.swim.distance!=="0"?`<div style="background:rgba(56,189,248,.08);border-radius:10px;padding:10px 12px;margin-top:8px">
+          <div style="font-size:10px;font-weight:700;color:var(--blue);margin-bottom:4px">🏊 SWIM — ${TRAINING_PLANS.swimming.weeks[w.week-1]?.target_m||w.swim.distance}m</div>
+          <div style="font-size:11px;color:var(--secondary)">${w.swim.notes}</div>
+        </div>`:""}
+        <div style="background:rgba(249,115,22,.06);border-radius:10px;padding:10px 12px;margin-top:8px">
+          <div style="font-size:10px;font-weight:700;color:var(--orange);margin-bottom:4px">💡 Key tip</div>
+          <div style="font-size:12px;color:var(--text);line-height:1.5">${w.keyTip}</div>
+        </div>
+      </div>`:""}
+    </div>`;
+  });
+  return html;
+}
+
+function renderSwimPlan(plan, cw) {
+  let html = "";
+  const thisWeek = plan.weeks[cw-1];
+  html+=`<div style="background:var(--surface);border:1px solid rgba(56,189,248,.3);border-radius:14px;padding:16px;margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div>
+        <div style="font-size:11px;color:var(--subtle)">This week's target</div>
+        <div style="font-size:36px;font-weight:700;color:var(--blue);line-height:1">${thisWeek.target_m}m</div>
+        <div style="font-size:11px;color:var(--secondary);margin-top:2px">${thisWeek.notes}</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:13px;color:var(--subtle)">progress</div>
+        <div style="font-size:22px;font-weight:700;color:var(--blue)">${Math.round((thisWeek.target_m/1600)*100)}%</div>
+        <div style="font-size:10px;color:var(--subtle)">to 1 mile</div>
+      </div>
+    </div>
+    <div class="prog-track"><div class="prog-fill" style="width:${Math.round((thisWeek.target_m/1600)*100)}%;background:var(--blue)"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--subtle);margin-top:4px"><span>800m</span><span>1600m (1 mile)</span></div>
+  </div>`;
+  plan.weeks.forEach(w=>{
+    const isCurrent=w.week===cw, isPast=w.week<cw;
+    html+=`<div style="display:flex;gap:10px;padding:9px 12px;background:var(--surface);border-radius:10px;margin-bottom:6px;border:1px solid ${isCurrent?"rgba(56,189,248,.3)":"var(--border)"}">
+      <div style="width:22px;height:22px;border-radius:50%;background:${isPast?"var(--green)":isCurrent?"var(--blue)":"var(--muted)"};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <span style="font-size:10px;color:#fff;font-weight:700">${isPast?"✓":w.week}</span>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:600;color:${isCurrent?"var(--blue)":"var(--text)"}">${w.dates}</div>
+        <div style="font-size:11px;color:var(--subtle)">${w.notes}</div>
+      </div>
+      <div style="font-size:15px;font-weight:700;color:${isCurrent?"var(--blue)":"var(--subtle)"}">${w.target_m}m</div>
+    </div>`;
+  });
+  return html;
+}
+
+function renderStrengthPlan(plan) {
+  let html = "";
+  plan.workouts.forEach(w=>{
+    html+=`<div style="background:var(--surface);border:1px solid rgba(167,139,250,.2);border-radius:14px;margin-bottom:10px;overflow:hidden">
+      <div style="padding:14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:14px;font-weight:700;color:var(--purple2)">${w.name}</div>
+        <button onclick="logPlanSession('${w.name}')" style="background:rgba(167,139,250,.2);color:var(--purple2);border:1px solid rgba(167,139,250,.3);border-radius:8px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer">Log session</button>
+      </div>
+      <div style="padding:0 14px">
+        ${w.exercises.map(e=>`
+          <div class="exercise-row">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:600;color:var(--bright)">${e.name}</div>
+              <div style="font-size:11px;color:var(--subtle);margin-top:2px">${e.notes}</div>
+            </div>
+            <div style="font-size:12px;font-weight:700;color:var(--purple2);flex-shrink:0;margin-left:10px">${e.sets}×${e.reps}</div>
+          </div>`).join("")}
+      </div>
+    </div>`;
+  });
+  return html;
+}
+
+function renderCustomPlan(plan, cw) {
+  let html = "";
+  (plan.weeks||[]).forEach(w=>{
+    const isCurrent=w.week===cw, isPast=w.week<cw, isOpen=w.week===expandedWeek;
+    html+=`<div style="background:var(--surface);border:1px solid ${isCurrent?plan.color+"66":"var(--border)"};border-radius:14px;margin-bottom:8px;overflow:hidden">
+      <div class="week-header" style="padding:12px 14px" onclick="expandedWeek=${isOpen?-1:w.week};render()">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:24px;height:24px;border-radius:50%;background:${isPast?"var(--green)":isCurrent?plan.color:"var(--muted)"};display:flex;align-items:center;justify-content:center">
+            <span style="font-size:10px;color:#fff;font-weight:700">${isPast?"✓":w.week}</span>
+          </div>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:${isCurrent?plan.color:"var(--text)"}">${w.label||"Week "+w.week}</div>
+            <div style="font-size:11px;color:var(--subtle)">${w.dates||""}</div>
+          </div>
+        </div>
+        <div style="font-size:16px;color:var(--subtle)">${isOpen?"▲":"▼"}</div>
+      </div>
+      ${isOpen&&w.sessions?`<div style="padding:0 14px 14px;border-top:1px solid var(--border)">
+        ${w.sessions.map(s=>`
+          <div class="session-tile" onclick="logPlanSession('${s.name}')">
+            <div style="font-size:13px;font-weight:600;color:var(--bright)">${s.name}</div>
+            <div style="font-size:12px;color:${plan.color};margin-top:2px">${s.target||""}</div>
+            <div style="font-size:11px;color:var(--subtle);margin-top:2px">${s.notes||""}</div>
+          </div>`).join("")}
+        ${w.tip?`<div style="background:rgba(255,255,255,.04);border-radius:10px;padding:10px;margin-top:8px;font-size:12px;color:var(--secondary)">💡 ${w.tip}</div>`:""}
+      </div>`:""}
+    </div>`;
+  });
+  return html;
+}
+
+// ── Plan data insights from app data ──────────────────────────────────────────
+function getPlanInsight() {
+  const days7=[...Array(7)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()-i);return d.toISOString().slice(0,10);});
+  const insights = [];
+
+  // Weight trend
+  const weights = Object.entries(db.weights).sort(([a],[b])=>b.localeCompare(a)).slice(0,7);
+  if(weights.length >= 2) {
+    const latest = typeof weights[0][1]==="object"?weights[0][1].kg:weights[0][1];
+    const oldest = typeof weights[weights.length-1][1]==="object"?weights[weights.length-1][1].kg:weights[weights.length-1][1];
+    const change = latest - oldest;
+    if(change < -0.5) insights.push(`⚖️ You've lost ${Math.abs(change).toFixed(1)}kg recently — make sure you're eating enough on long run days to fuel recovery.`);
+    if(change > 0.3) insights.push(`⚖️ Weight up ${change.toFixed(1)}kg this week — check portion sizes on rest days.`);
+  }
+
+  // Weekly running volume vs plan
+  const weeklyKm = days7.reduce((s,d)=>{
+    const acts=[...(db.activities[d]||[]),...(db.stravaCache[d]||[])];
+    return s+acts.filter(a=>(a.sport_type||"").includes("Run")||(a.name||"").toLowerCase().includes("run")).reduce((s2,a)=>s2+(a.distance_m?a.distance_m/1000:a.distance||0),0);
+  },0);
+  const cw = currentTrainingWeek();
+  const targetKm = TRAINING_PLANS.alps50k.weeks[cw-1]?.totalKm || 40;
+  const pct = Math.round((weeklyKm/targetKm)*100);
+  if(pct < 40 && cw <= 4) insights.push(`🏃 You're at ${weeklyKm.toFixed(0)}km this week vs ${targetKm}km target (${pct}%). Try to get a long run in before Sunday.`);
+  if(pct >= 80) insights.push(`🏃 Great week — ${weeklyKm.toFixed(0)}km logged, on track for your ${targetKm}km target.`);
+
+  // Protein for muscle building
+  const avgProtein = days7.reduce((s,d)=>s+macroSum(d,"protein"),0)/7;
+  if(avgProtein < 120 && db.mode==="strength") insights.push(`💪 Avg protein this week: ${Math.round(avgProtein)}g/day. Aim for 160g+ to support muscle development alongside your training.`);
+
+  // Sleep & recovery
+  const sleeps = days7.map(d=>(db.checkins[d]||{}).sleep_hrs).filter(Boolean);
+  const avgSleep = sleeps.length?sleeps.reduce((a,b)=>a+b,0)/sleeps.length:null;
+  if(avgSleep && avgSleep < 6.5) insights.push(`😴 Avg ${avgSleep.toFixed(1)}h sleep this week. Under 7h significantly impacts running recovery and muscle building — prioritise sleep before your long run.`);
+
+  // Hydration in heat
+  const avgHydro = days7.reduce((s,d)=>s+totalHydro(d),0)/7;
+  if(avgHydro < 1500) insights.push(`💧 Avg ${Math.round(avgHydro)}ml hydration/day. In Cyprus heat, especially on training days, aim for 2500ml+ — dehydration tanks performance.`);
+
+  return insights.length > 0 ? insights[0] : null; // Show most relevant insight
+}
+
+// ── New plan modal & AI generation ───────────────────────────────────────────
+function openNewPlanModal() {
+  document.getElementById("newPlanDesc").value="";
+  document.getElementById("newPlanResult").style.display="none";
+  document.getElementById("newPlanErr").style.display="none";
+  document.getElementById("newPlanBtn").textContent="Generate plan with AI";
+  document.getElementById("newPlanBtn").disabled=false;
+  document.getElementById("newPlanModal").style.display="flex";
+}
+
+async function generateNewPlan() {
+  const desc = document.getElementById("newPlanDesc").value.trim();
+  if(!desc) { showErr("newPlanErr","Describe your goal first"); return; }
+  const btn = document.getElementById("newPlanBtn");
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>Building plan…';
+  document.getElementById("newPlanErr").style.display="none";
+
+  const cw = currentTrainingWeek();
+  const prompt = `You are a personal trainer and coach building a training plan for Alex.
+Profile: 33yr male, ${db.profile.weight}kg, Cyprus. Works 8am-2pm. Two young kids. Available to train most days but times vary. Morning before 8am or afternoon after 2pm.
+Current training: Running 30km/week, open water swimming weekly, gym access (bench press, bodyweight).
+Current mode: ${currentMode().name}.
+Sleep avg: ${(Object.entries(db.checkins).slice(-7).map(([,c])=>c.sleep_hrs).filter(Boolean).reduce((a,b)=>a+b,0)/Math.max(1,Object.entries(db.checkins).slice(-7).filter(([,c])=>c.sleep_hrs).length)).toFixed(1)}h.
+
+Goal: ${desc}
+
+Build a structured training plan. Return ONLY valid JSON, no markdown:
+{
+  "id": "custom_${Date.now()}",
+  "name": "Short plan name",
+  "emoji": "single emoji",
+  "color": "#hexcolor",
+  "goal": "one sentence goal",
+  "custom": true,
+  "weeks": [
+    {
+      "week": 1,
+      "label": "Phase name",
+      "dates": "date range",
+      "theme": "weekly theme",
+      "tip": "key tip for the week",
+      "sessions": [
+        {"name": "session name", "target": "distance/duration/sets", "notes": "coaching notes"}
+      ]
+    }
+  ]
+}
+Include 4-8 weeks depending on the goal. Each week has 3-5 sessions. Be specific and realistic given his schedule and current fitness.`;
+
+  try {
+    const r = await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2000,messages:[{role:"user",content:prompt}]})});
+    const d = await r.json();
+    const text = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+    const start=text.indexOf("{"), end=text.lastIndexOf("}");
+    const plan = JSON.parse(text.slice(start,end+1));
+
+    // Store in db
+    if(!db.customPlans) db.customPlans={};
+    db.customPlans[plan.id]=plan;
+    // Add to TRAINING_PLANS
+    TRAINING_PLANS[plan.id]=plan;
+    save();
+
+    document.getElementById("newPlanResult").innerHTML=`
+      <div style="background:var(--muted);border-radius:12px;padding:14px;margin-bottom:12px">
+        <div style="font-size:16px;font-weight:700">${plan.emoji} ${plan.name}</div>
+        <div style="font-size:12px;color:var(--secondary);margin-top:4px">${plan.goal}</div>
+        <div style="font-size:11px;color:var(--subtle);margin-top:6px">${plan.weeks.length} weeks · ${plan.weeks.reduce((s,w)=>s+(w.sessions?.length||0),0)} total sessions</div>
+      </div>`;
+    document.getElementById("newPlanResult").style.display="block";
+    btn.textContent="Add to my plans";
+    btn.onclick=()=>{
+      activePlanId=plan.id;
+      document.getElementById("newPlanModal").style.display="none";
+      render();
+    };
+    btn.disabled=false;
+  } catch(e) {
+    showErr("newPlanErr","Failed: "+e.message);
+    btn.textContent="Generate plan with AI";
+    btn.disabled=false;
+  }
+}
+
+function deletePlan(id) {
+  const builtIn = ["alps50k","swimming","strength"];
+  if(builtIn.includes(id)) {
+    if(!confirm("This is a built-in plan. Are you sure you want to remove it?")) return;
+  } else {
+    if(!confirm("Delete this plan?")) return;
+  }
+  delete TRAINING_PLANS[id];
+  if(db.customPlans) delete db.customPlans[id];
+  activePlanId = Object.keys(TRAINING_PLANS)[0] || "alps50k";
+  save(); render();
+}
+
 function logPlanSession(name) {
-  // Open activity modal pre-filled with session name
   openModal("actModal");
   setTimeout(()=>{
-    document.getElementById("actName").value = name;
+    document.getElementById("actName").value=name;
     document.getElementById("actDur").focus();
-  }, 100);
+  },100);
 }
+
+// ── HISTORY ───────────────────────────────────────────────────────────────────
 
 // ── HISTORY ───────────────────────────────────────────────────────────────────
 function renderHistory() {
