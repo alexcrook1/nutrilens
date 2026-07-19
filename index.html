@@ -1596,7 +1596,11 @@ Include 4-8 weeks depending on the goal. Each week has 3-5 sessions. Be specific
     const d = await r.json();
     const text = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
     const start=text.indexOf("{"), end=text.lastIndexOf("}");
-    const plan = JSON.parse(text.slice(start,end+1));
+    let planText = text.slice(start,end+1);
+    // Clean common JSON issues from AI output
+    planText = planText.replace(/,\s*}/g,'}').replace(/,\s*]/g,']');
+    planText = planText.replace(/[ --]/g,' ');
+    const plan = JSON.parse(planText);
 
     // Store in db
     if(!db.customPlans) db.customPlans={};
