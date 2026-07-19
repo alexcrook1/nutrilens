@@ -1566,36 +1566,17 @@ async function generateNewPlan() {
   document.getElementById("newPlanErr").style.display="none";
 
   const cw = currentTrainingWeek();
-  const prompt = `You are a personal trainer and coach building a training plan for Alex.
-Profile: 33yr male, ${db.profile.weight}kg, Cyprus. Works 8am-2pm. Two young kids. Available to train most days but times vary. Morning before 8am or afternoon after 2pm.
-Current training: Running 30km/week, open water swimming weekly, gym access (bench press, bodyweight).
-Current mode: ${currentMode().name}.
-Sleep avg: ${(Object.entries(db.checkins).slice(-7).map(([,c])=>c.sleep_hrs).filter(Boolean).reduce((a,b)=>a+b,0)/Math.max(1,Object.entries(db.checkins).slice(-7).filter(([,c])=>c.sleep_hrs).length)).toFixed(1)}h.
-
-Goal: ${desc}
-
-Build a structured training plan. Return ONLY valid JSON, no markdown:
-{
-  "id": "custom_${Date.now()}",
-  "name": "Short plan name",
-  "emoji": "single emoji",
-  "color": "#hexcolor",
-  "goal": "one sentence goal",
-  "custom": true,
-  "weeks": [
-    {
-      "week": 1,
-      "label": "Phase name",
-      "dates": "date range",
-      "theme": "weekly theme",
-      "tip": "key tip for the week",
-      "sessions": [
-        {"name": "session name", "target": "distance/duration/sets", "notes": "coaching notes"}
-      ]
-    }
-  ]
-}
-Include 4-8 weeks depending on the goal. Each week has 3-5 sessions. Be specific and realistic given his schedule and current fitness.`;
+  const sleepVals=Object.values(db.checkins||{}).slice(-7).map(c=>c.sleep_hrs).filter(Boolean);
+  const sleepAvg=sleepVals.length?(sleepVals.reduce((a,b)=>a+b,0)/sleepVals.length).toFixed(1):"7.0";
+  const w=db.profile.weight||77;
+  const prompt="Create a training plan JSON object only. No explanation. No markdown. Just JSON.\n"+
+    "Athlete: Alex, 33yr male, "+w+"kg, Cyprus. Runs 30km/week, gym access (bench press, bodyweight), swims weekly.\n"+
+    "Goal: "+desc+"\n"+
+    "Return this exact JSON structure (replace example values):\n"+
+    '{"id":"custom_1","name":"Plan Name","emoji":"🎯","color":"#7c6ff7","goal":"One sentence goal","custom":true,'+
+    '"weeks":[{"week":1,"label":"Foundation","dates":"Week 1","theme":"Build base","tip":"Stay consistent",'+
+    '"sessions":[{"name":"Session name","target":"30 min","notes":"Keep form strict"}]}]}\n'+
+    "Rules: 4-6 weeks total, 3-4 sessions per week, double quotes only, no apostrophes, no trailing commas."
 
   try {
     const r = await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},
@@ -1670,14 +1651,30 @@ function deletePlan(id) {
 }
 
 function logPlanSession(name) {
+  const t=today();
+  if(!db.completedSessions) db.completedSessions={};
+  if(!db.completedSessions[t]) db.completedSessions[t]=[];
+  if(!db.completedSessions[t].includes(name)) { db.completedSessions[t].push(name); save(); }
   openModal("actModal");
-  setTimeout(()=>{
-    document.getElementById("actName").value=name;
-    document.getElementById("actDur").focus();
-  },100);
+  setTimeout(()=>{ document.getElementById("actName").value=name; document.getElementById("actDur").focus(); },100);
 }
 
-// ── HISTORY ───────────────────────────────────────────────────────────────────
+function isSessionComplete(sessionName) {
+  const days7=[...Array(7)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()-i);return d.toISOString().slice(0,10);});
+  const sn=sessionName.toLowerCase();
+  const key=sn.replace(/[^a-z]/g,"").slice(0,8);
+  if(days7.some(d=>(db.completedSessions?.[d]||[]).some(s=>s.toLowerCase().replace(/[^a-z]/g,"").slice(0,8)===key))) return true;
+  const allActs=days7.flatMap(d=>[...(db.activities[d]||[]),...(db.stravaCache[d]||[])]);
+  if(sn.includes("run")||sn.includes("long")||sn.includes("hill")||sn.includes("easy")||sn.includes("tempo")||sn.includes("stride")||sn.includes("back")||sn.includes("shakeout"))
+    return allActs.some(a=>(a.sport_type||a.type||a.name||"").toLowerCase().includes("run"));
+  if(sn.includes("swim")) return allActs.some(a=>(a.sport_type||a.type||a.name||"").toLowerCase().includes("swim"));
+  if(sn.includes("push")||sn.includes("core")||sn.includes("chest")||sn.includes("abs")||sn.includes("bench")||sn.includes("strength")||sn.includes("gym")||sn.includes("weight"))
+    return allActs.some(a=>{const n=(a.name||"").toLowerCase(),st=(a.sport_type||a.type||"").toLowerCase();
+      return n.includes("push")||n.includes("core")||n.includes("chest")||n.includes("abs")||n.includes("bench")||
+             n.includes("weight")||n.includes("strength")||n.includes("gym")||n.includes("workout")||
+             st.includes("weight")||st.includes("workout");});
+  return false;
+}
 
 // ── HISTORY ───────────────────────────────────────────────────────────────────
 function renderHistory() {
