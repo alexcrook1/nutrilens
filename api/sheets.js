@@ -1,4 +1,4 @@
-// api/sheets.js - Append rows to Google Sheets using service account or OAuth token
+// api/sheets.js - Google Sheets sync with auto token refresh
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -8,36 +8,50 @@ module.exports = async function handler(req, res) {
   try {
     const { sheet, rows } = req.body;
     const SHEET_ID = "19T988OPgeQGbwmkapgNfy7NNwcx-8V8DBrkB66LCquE";
-    const token = process.env.GOOGLE_SHEETS_TOKEN;
 
-    if (!token) {
-      // Fallback: just log to console and return OK so app doesn't break
-      console.log(`Sheets sync (no token): ${sheet}`, rows);
-      return res.status(200).json({ ok: true, note: "No token configured" });
+    // Get fresh access token using refresh token
+    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
+        grant_type: "refresh_token"
+      })
+    });
+
+    const tokenData = await tokenRes.json();
+    if (!tokenData.access_token) {
+      console.error("Token refresh failed:", tokenData);
+      return res.status(200).json({ ok: false, error: "Token refresh failed" });
     }
 
+    const access_token = tokenData.access_token;
+
+    // Ensure sheet/tab exists by trying to append
     const range = encodeURIComponent(`${sheet}!A1`);
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
 
-    const response = await fetch(url, {
+    const sheetsRes = await fetch(url, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${token}`,
+        "Authorization": `Bearer ${access_token}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ values: rows })
     });
 
-    if (!response.ok) {
-      const err = await response.text();
+    if (!sheetsRes.ok) {
+      const err = await sheetsRes.text();
       console.error("Sheets API error:", err);
-      return res.status(200).json({ ok: false, error: err }); // Don't fail the app
+      return res.status(200).json({ ok: false, error: err });
     }
 
-    const data = await response.json();
+    const data = await sheetsRes.json();
     return res.status(200).json({ ok: true, updated: data.updates?.updatedRows });
   } catch (err) {
     console.error("Sheets sync error:", err.message);
-    return res.status(200).json({ ok: false, error: err.message }); // Always return 200 so app continues
+    return res.status(200).json({ ok: false, error: err.message });
   }
 };
