@@ -563,7 +563,6 @@ function freshDB() {
     checkins:{},   // {date: {sleep_hrs,sleep_q,energy,water(legacy)}}
     stravaCache:{},
     stravaTokens:null, // {access_token, refresh_token, expires_at, athlete}
-    completedSessions:{}, // {date: ["session name 1", "session name 2"]}
     insight:null, insightDate:null,
     microAlerts:null, microAlertsDate:null
   };
@@ -1380,20 +1379,17 @@ function renderAlpsPlan(plan, cw) {
       ${isOpen?`<div style="padding:0 14px 14px;border-top:1px solid var(--border)">
         <div style="font-size:11px;color:var(--secondary);padding:10px 0;font-style:italic">${w.theme}</div>
         ${w.runs.map(r=>`
-          <div class="session-tile ${isSessionDoneByStrava(r.type, r.target.match(/[0-9.]+km/)?.[0]?.replace('km',''))?'completed':''}" onclick="logPlanSession('${r.type} ${r.target}')">
+          <div class="session-tile" onclick="logPlanSession('${r.type} ${r.target}')">
             <div style="display:flex;justify-content:space-between;align-items:flex-start">
               <div style="flex:1">
                 <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
                   <span style="font-size:10px;font-weight:700;color:var(--orange);background:rgba(249,115,22,.1);padding:2px 6px;border-radius:6px">${r.day}</span>
                   <span style="font-size:13px;font-weight:600;color:var(--bright)">${r.type}</span>
-                  ${isSessionDoneByStrava(r.type, r.target.match(/[0-9.]+km/)?.[0]?.replace('km','')) ? '<span style="font-size:11px;color:var(--green)">✓ Done</span>' : ''}
                 </div>
                 <div style="font-size:12px;color:var(--purple2);font-weight:600">${r.target}</div>
                 <div style="font-size:11px;color:var(--subtle);margin-top:3px">${r.notes}</div>
               </div>
-              ${isSessionDoneByStrava(r.type, r.target.match(/[0-9.]+km/)?.[0]?.replace('km',''))
-                ? '<div style="background:var(--green);color:#fff;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;flex-shrink:0;margin-left:8px;align-self:center">✓</div>'
-                : '<div style="background:var(--purple);color:#fff;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;flex-shrink:0;margin-left:8px;align-self:center">Log</div>'}
+              <div style="background:var(--purple);color:#fff;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;flex-shrink:0;margin-left:8px;align-self:center">Log</div>
             </div>
           </div>`).join("")}
         ${w.gym.sessions>0?`<div style="background:rgba(167,139,250,.08);border-radius:10px;padding:10px 12px;margin-top:8px">
@@ -1454,13 +1450,8 @@ function renderStrengthPlan(plan) {
   plan.workouts.forEach(w=>{
     html+=`<div style="background:var(--surface);border:1px solid rgba(167,139,250,.2);border-radius:14px;margin-bottom:10px;overflow:hidden">
       <div style="padding:14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <div style="font-size:14px;font-weight:700;color:var(--purple2)">${w.name}</div>
-          ${isSessionDoneByStrava(w.name,null)?'<div style="font-size:11px;color:var(--green);margin-top:2px">✓ Completed this week</div>':""}
-        </div>
-        ${isSessionDoneByStrava(w.name,null)
-          ?'<div style="background:var(--green);color:#fff;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:600">✓ Done</div>'
-          :`<button onclick="logPlanSession('${w.name}')" style="background:rgba(167,139,250,.2);color:var(--purple2);border:1px solid rgba(167,139,250,.3);border-radius:8px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer">Log session</button>`}
+        <div style="font-size:14px;font-weight:700;color:var(--purple2)">${w.name}</div>
+        <button onclick="logPlanSession('${w.name}')" style="background:rgba(167,139,250,.2);color:var(--purple2);border:1px solid rgba(167,139,250,.3);border-radius:8px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer">Log session</button>
       </div>
       <div style="padding:0 14px">
         ${w.exercises.map(e=>`
@@ -1568,57 +1559,44 @@ async function generateNewPlan() {
   document.getElementById("newPlanErr").style.display="none";
 
   const cw = currentTrainingWeek();
-  const sleepVals = Object.values(db.checkins).slice(-7).map(c=>c.sleep_hrs).filter(Boolean);
-  const sleepAvg = sleepVals.length ? (sleepVals.reduce((a,b)=>a+b,0)/sleepVals.length).toFixed(1) : "7.0";
-  const weight = db.profile.weight || 77;
-  const modeName = currentMode().name;
+  const prompt = `You are a personal trainer and coach building a training plan for Alex.
+Profile: 33yr male, ${db.profile.weight}kg, Cyprus. Works 8am-2pm. Two young kids. Available to train most days but times vary. Morning before 8am or afternoon after 2pm.
+Current training: Running 30km/week, open water swimming weekly, gym access (bench press, bodyweight).
+Current mode: ${currentMode().name}.
+Sleep avg: ${(Object.entries(db.checkins).slice(-7).map(([,c])=>c.sleep_hrs).filter(Boolean).reduce((a,b)=>a+b,0)/Math.max(1,Object.entries(db.checkins).slice(-7).filter(([,c])=>c.sleep_hrs).length)).toFixed(1)}h.
 
-  const prompt = "You are a personal trainer building a training plan for Alex. " +
-    "Profile: 33yr male, " + weight + "kg, Cyprus. Works 8am-2pm. Two young kids. " +
-    "Trains most days, mornings before 8am or afternoons after 2pm. " +
-    "Current fitness: Running 30km/week, open water swimming weekly, gym access (bench press, bodyweight). " +
-    "Sleep avg: " + sleepAvg + "h. Mode: " + modeName + ". " +
-    "Goal: " + desc + ". " +
-    "Return ONLY a raw JSON object (no markdown, no backticks, no commentary). Schema: " +
-    '{"id":"custom_1","name":"Plan name","emoji":"emoji","color":"#hexcolor","goal":"goal sentence","custom":true,' +
-    '"weeks":[{"week":1,"label":"Phase","dates":"Jul 19-25","theme":"theme","tip":"key tip",' +
-    '"sessions":[{"name":"Session name","target":"distance or sets","notes":"coaching notes"}]}]}. ' +
-    "Include 4-8 weeks, 3-5 sessions per week. Be specific and realistic.";
+Goal: ${desc}
+
+Build a structured training plan. Return ONLY valid JSON, no markdown:
+{
+  "id": "custom_${Date.now()}",
+  "name": "Short plan name",
+  "emoji": "single emoji",
+  "color": "#hexcolor",
+  "goal": "one sentence goal",
+  "custom": true,
+  "weeks": [
+    {
+      "week": 1,
+      "label": "Phase name",
+      "dates": "date range",
+      "theme": "weekly theme",
+      "tip": "key tip for the week",
+      "sessions": [
+        {"name": "session name", "target": "distance/duration/sets", "notes": "coaching notes"}
+      ]
+    }
+  ]
+}
+Include 4-8 weeks depending on the goal. Each week has 3-5 sessions. Be specific and realistic given his schedule and current fitness.`;
 
   try {
     const r = await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2000,messages:[{role:"user",content:prompt}]})});
     const d = await r.json();
     const text = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
-    // Extract JSON using bracket matching
-    let jStart=-1, jDepth=0, jEnd=-1;
-    for(let i=0;i<text.length;i++){
-      if(text[i]==="{"){if(jDepth===0)jStart=i;jDepth++;}
-      else if(text[i]==="}"){jDepth--;if(jDepth===0){jEnd=i;break;}}
-    }
-    if(jStart===-1||jEnd===-1) throw new Error("No JSON found in response");
-    let planJson = text.slice(jStart,jEnd+1);
-    // Fix common AI JSON problems
-    planJson = planJson.replace(/,\s*}/g,"}").replace(/,\s*]/g,"]"); // trailing commas
-    planJson = planJson.replace(/’|‘/g,"").replace(/“|”/g,""); // smart quotes
-    planJson = planJson.replace(/[ --]/g,""); // control chars
-    // Try to parse, salvage if fails by stripping problem fields
-    let plan;
-    try { plan = JSON.parse(planJson); }
-    catch(e1) {
-      try {
-        // Strip potentially problematic long string values
-        planJson = planJson.replace(/"notes"\s*:\s*"[^"]*"/g,'"notes":""');
-        planJson = planJson.replace(/"tip"\s*:\s*"[^"]*"/g,'"tip":""');
-        plan = JSON.parse(planJson);
-      } catch(e2) { throw new Error("Could not parse plan JSON: "+e2.message); }
-    }
-    // Ensure required fields exist
-    if(!plan.id) plan.id = "custom_"+Date.now();
-    if(!plan.custom) plan.custom = true;
-    if(!plan.color) plan.color = "#7c6ff7";
-    if(!plan.emoji) plan.emoji = "🎯";
-    if(!Array.isArray(plan.weeks)) throw new Error("Plan missing weeks array");
+    const start=text.indexOf("{"), end=text.lastIndexOf("}");
+    const plan = JSON.parse(text.slice(start,end+1));
 
     // Store in db
     if(!db.customPlans) db.customPlans={};
@@ -1662,11 +1640,6 @@ function deletePlan(id) {
 }
 
 function logPlanSession(name) {
-  // Mark as completed
-  const t=today();
-  if(!db.completedSessions) db.completedSessions={};
-  if(!db.completedSessions[t]) db.completedSessions[t]=[];
-  if(!db.completedSessions[t].includes(name)) { db.completedSessions[t].push(name); save(); }
   openModal("actModal");
   setTimeout(()=>{
     document.getElementById("actName").value=name;
@@ -1674,34 +1647,7 @@ function logPlanSession(name) {
   },100);
 }
 
-function isSessionDone(name) {
-  const days=[...Array(7)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()-i);return d.toISOString().slice(0,10);});
-  return days.some(d=>(db.completedSessions?.[d]||[]).some(s=>s.toLowerCase().includes(name.toLowerCase().split(" ")[0])));
-}
-
-function isSessionDoneByStrava(type, kmStr) {
-  const days=[...Array(7)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()-i);return d.toISOString().slice(0,10);});
-  const allActs=days.flatMap(d=>[...(db.activities[d]||[]),...(db.stravaCache[d]||[])]);
-  const t=type.toLowerCase();
-  if(t.includes("run")||t.includes("long")||t.includes("back")||t.includes("hill")||t.includes("easy")||t.includes("tempo")||t.includes("stride")||t.includes("shakeout")) {
-    const runs=allActs.filter(a=>(a.sport_type||a.type||"").toLowerCase().includes("run")||(a.name||"").toLowerCase().includes("run"));
-    if(kmStr) { const km=parseFloat(kmStr); return runs.some(a=>(a.distance_m?a.distance_m/1000:a.distance||0)>=km*0.8); }
-    return runs.length>0;
-  }
-  if(t.includes("swim")) return allActs.some(a=>(a.sport_type||a.type||"").toLowerCase().includes("swim"));
-  // For gym/strength sessions - check both manual activity log and completedSessions
-  if(t.includes("push")||t.includes("core")||t.includes("gym")||t.includes("strength")||t.includes("weight")||t.includes("bench")||t.includes("circuit")) {
-    const gymActs = allActs.filter(a=>{
-      const n=(a.name||"").toLowerCase(), st=(a.sport_type||a.type||"").toLowerCase();
-      return n.includes("push")||n.includes("core")||n.includes("gym")||n.includes("weight")||
-             n.includes("bench")||n.includes("strength")||n.includes("circuit")||
-             st.includes("weight")||st.includes("workout");
-    });
-    if(gymActs.length>0) return true;
-  }
-  // Final fallback - check completedSessions for any partial match
-  return isSessionDone(type);
-}
+// ── HISTORY ───────────────────────────────────────────────────────────────────
 
 // ── HISTORY ───────────────────────────────────────────────────────────────────
 function renderHistory() {
@@ -2831,25 +2777,25 @@ async function syncStravaDate(token, date) {
 async function syncStrava(force=false){
   const t=today();
   if(!stravaConnected()) return;
+  // Check if we need to sync at all
   if(!force&&db.stravaCache[t]!==undefined) return;
   stravaLoading=true; render();
   try{
     const token=await ensureFreshToken();
     if(!token){stravaLoading=false;render();return;}
 
-    // Sync today first
+    // Sync today first (most important)
     await syncStravaDate(token, t);
     save(); render();
 
-    // Backfill past 42 days (6 weeks — full training plan period) if not cached
-    const past=[...Array(41)].map((_,i)=>{
+    // Then backfill past 6 days if not already cached
+    const past=[...Array(6)].map((_,i)=>{
       const d=new Date(); d.setDate(d.getDate()-(i+1));
       return d.toISOString().slice(0,10);
     });
     for(const date of past){
       if(force || db.stravaCache[date]===undefined){
         await syncStravaDate(token, date);
-        await new Promise(r=>setTimeout(r,100)); // small delay to avoid rate limits
       }
     }
     save();
