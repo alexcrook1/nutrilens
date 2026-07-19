@@ -906,7 +906,7 @@ function renderToday() {
   if(dtr > 0 && dtr <= 40) {
     const cw = currentTrainingWeek();
     const alpsWeek = TRAINING_PLANS.alps50k.weeks[cw-1];
-    html+=`<div style="background:linear-gradient(135deg,#1a0a00,#2d1200);border:1px solid rgba(249,115,22,.3);border-radius:14px;padding:12px 14px;margin:12px 14px 0;display:flex;align-items:center;gap:12px" onclick="switchTab('training');document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab==='training'))">
+    html+=`<div style="background:linear-gradient(135deg,#1a0a00,#2d1200);border:1px solid rgba(249,115,22,.3);border-radius:14px;padding:12px 14px;margin:12px 14px 0;display:flex;align-items:center;gap:12px" onclick="switchTab('training')">
       <div style="font-size:28px">🏔</div>
       <div style="flex:1">
         <div style="font-size:11px;font-weight:700;color:var(--orange)">BAVARIAN ALPS 50KM</div>
