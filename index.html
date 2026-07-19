@@ -1179,6 +1179,7 @@ function doneCheckin(){
   if(!ciState.energy){alert("Tap your energy level");return;}
   if(!db.checkins[today()]) db.checkins[today()]={};
   Object.assign(db.checkins[today()],ciState);
+  logToSheets_checkin(db.checkins[today()]);
   ciState={sleep_hrs:null,sleep_q:null,energy:null};
   save();render();
 }
@@ -1442,6 +1443,7 @@ function confirmLog() {
   const saved = save();
 
   if(saved) {
+    logToSheets_meal(entry);
     closeModal("logModal");
     render();
   } else {
@@ -1469,7 +1471,9 @@ function confirmAct(){
   const t=today(), act={id:Date.now().toString(),name,duration:dur,distance:dist||null,calories:cal,emoji:selEmoji||"💪",time:new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})};
   if(!db.activities[t]) db.activities[t]=[];
   db.activities[t].push(act);
-  save();closeModal("actModal");render();
+  save();
+  logToSheets_activity({...act, type:"Manual"});
+  closeModal("actModal");render();
 }
 function delAct(id){const t=today();db.activities[t]=(db.activities[t]||[]).filter(a=>a.id!==id);save();render();}
 
@@ -1480,10 +1484,11 @@ function confirmWeight(){
   const rhr=parseFloat(document.getElementById("rhrIn").value)||null;
   if(isNaN(w)||w<30||w>300) return;
   db.weights[today()]={kg:w, waist_cm:waist, rhr_bpm:rhr};
-  db.profile.weight=w; // current weight updates
-  // startWeight only set once - never overwritten
+  db.profile.weight=w;
   if(!db.profile.startWeight) db.profile.startWeight=w;
-  save();closeModal("weightModal");render();
+  save();
+  logToSheets_weight(w, waist, rhr);
+  closeModal("weightModal");render();
 }
 
 // ── Mode ──────────────────────────────────────────────────────────────────────
@@ -1920,6 +1925,7 @@ function logWaterQuick() {
   db.logs[t].push(entry);
   const saved=save();
   if(saved){
+    logToSheets_meal(entry);
     // Update daily total display
     const newTotal=(db.logs[t]||[]).reduce((s,l)=>s+(l.hydro_ml||0),0);
     const el=document.getElementById("waterDailyTotal");
@@ -1934,6 +1940,67 @@ function logWaterQuick() {
   } else {
     showErr("logErr","Storage full — go to History tab and free up space");
   }
+}
+
+// ── Google Sheets Sync ────────────────────────────────────────────────────────
+const SHEET_ID = "19T988OPgeQGbwmkapgNfy7NNwcx-8V8DBrkB66LCquE";
+
+async function syncToSheets(sheet, rows) {
+  try {
+    await fetch("/api/sheets", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({sheet, rows})
+    });
+  } catch(e) {
+    console.warn("Sheets sync failed:", e.message);
+  }
+}
+
+function logToSheets_meal(entry) {
+  const row = [
+    new Date().toISOString(),
+    today(),
+    entry.time,
+    entry.name,
+    entry.type,
+    entry.calories||0,
+    entry.protein||0,
+    entry.carbs||0,
+    entry.fat||0,
+    entry.ml||0,
+    entry.hydro_ml||0,
+    entry.caffeine_mg||0,
+    entry.confidence||"",
+    entry.notes||""
+  ];
+  syncToSheets("Meals", [row]);
+}
+
+function logToSheets_activity(entry) {
+  const row = [
+    new Date().toISOString(),
+    today(),
+    entry.time||"",
+    entry.name,
+    entry.sport_type||entry.type||"",
+    entry.duration||Math.round((entry.moving_time_s||0)/60)||0,
+    entry.distance||((entry.distance_m||0)/1000)||0,
+    entry.calories||0,
+    entry.elevation_m||0,
+    entry.fromStrava?"Strava":"Manual"
+  ];
+  syncToSheets("Activities", [row]);
+}
+
+function logToSheets_weight(kg, waist, rhr) {
+  const row = [new Date().toISOString(), today(), kg, waist||"", rhr||"", parseFloat((kg/((db.profile.height/100)**2)).toFixed(1))];
+  syncToSheets("Weights", [row]);
+}
+
+function logToSheets_checkin(ci) {
+  const row = [new Date().toISOString(), today(), ci.sleep_hrs||"", ci.sleep_q||"", ci.energy||""];
+  syncToSheets("Checkins", [row]);
 }
 
 function showErr(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display="block";}
