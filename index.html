@@ -1585,8 +1585,25 @@ async function generateNewPlan() {
       body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2000,messages:[{role:"user",content:prompt}]})});
     const d = await r.json();
     const text = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
-    const start=text.indexOf("{"), end=text.lastIndexOf("}");
-    const plan = JSON.parse(text.slice(start,end+1));
+    // Robustly extract JSON - find the outermost { } pair
+    let start=-1, depth=0, end=-1;
+    for(let i=0;i<text.length;i++){
+      if(text[i]==="{"){if(depth===0)start=i;depth++;}
+      else if(text[i]==="}"){depth--;if(depth===0){end=i;break;}}
+    }
+    if(start===-1||end===-1) throw new Error("No JSON found in response");
+    let planJson = text.slice(start,end+1);
+    // Remove control characters that break JSON
+    planJson = planJson.replace(/[ --]/g,"");
+    // Fix trailing commas before } or ]
+    planJson = planJson.replace(/,(\s*[}\]])/g,"$1");
+    const plan = JSON.parse(planJson);
+    // Ensure required fields exist
+    if(!plan.id) plan.id = "custom_"+Date.now();
+    if(!plan.custom) plan.custom = true;
+    if(!plan.color) plan.color = "#7c6ff7";
+    if(!plan.emoji) plan.emoji = "🎯";
+    if(!Array.isArray(plan.weeks)) throw new Error("Plan missing weeks array");
 
     // Store in db
     if(!db.customPlans) db.customPlans={};
@@ -1657,6 +1674,16 @@ function isSessionDoneByStrava(type, kmStr) {
     return runs.length>0;
   }
   if(t.includes("swim")) return allActs.some(a=>(a.sport_type||a.type||"").toLowerCase().includes("swim"));
+  // For gym/strength sessions - check both manual activity log and completedSessions
+  if(t.includes("push")||t.includes("core")||t.includes("gym")||t.includes("strength")||t.includes("weight")||t.includes("bench")||t.includes("circuit")) {
+    const gymActs = allActs.filter(a=>{
+      const n=(a.name||"").toLowerCase(), st=(a.sport_type||a.type||"").toLowerCase();
+      return n.includes("push")||n.includes("core")||n.includes("gym")||n.includes("weight")||
+             n.includes("bench")||n.includes("strength")||n.includes("circuit")||
+             st.includes("weight")||st.includes("workout");
+    });
+    if(gymActs.length>0) return true;
+  }
   return isSessionDone(type);
 }
 
