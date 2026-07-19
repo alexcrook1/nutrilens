@@ -1454,8 +1454,13 @@ function renderStrengthPlan(plan) {
   plan.workouts.forEach(w=>{
     html+=`<div style="background:var(--surface);border:1px solid rgba(167,139,250,.2);border-radius:14px;margin-bottom:10px;overflow:hidden">
       <div style="padding:14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-        <div style="font-size:14px;font-weight:700;color:var(--purple2)">${w.name}</div>
-        <button onclick="logPlanSession('${w.name}')" style="background:rgba(167,139,250,.2);color:var(--purple2);border:1px solid rgba(167,139,250,.3);border-radius:8px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer">Log session</button>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--purple2)">${w.name}</div>
+          ${isSessionDoneByStrava(w.name,null)?'<div style="font-size:11px;color:var(--green);margin-top:2px">✓ Completed this week</div>':""}
+        </div>
+        ${isSessionDoneByStrava(w.name,null)
+          ?'<div style="background:var(--green);color:#fff;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:600">✓ Done</div>'
+          :`<button onclick="logPlanSession('${w.name}')" style="background:rgba(167,139,250,.2);color:var(--purple2);border:1px solid rgba(167,139,250,.3);border-radius:8px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer">Log session</button>`}
       </div>
       <div style="padding:0 14px">
         ${w.exercises.map(e=>`
