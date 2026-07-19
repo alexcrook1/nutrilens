@@ -1588,7 +1588,7 @@ Build a structured training plan. Return ONLY valid JSON, no markdown:
     }
   ]
 }
-Include 4-8 weeks depending on the goal. Each week has 3-5 sessions. Be specific and realistic given his schedule and current fitness.`;
+Include 4-8 weeks depending on the goal. Each week has 3-5 sessions. Be specific and realistic given his schedule and current fitness. IMPORTANT: Return ONLY raw JSON. No markdown backticks, no commentary. No trailing commas anywhere. Keep all string values on single lines.`;
 
   try {
     const r = await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},
