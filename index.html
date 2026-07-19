@@ -1630,11 +1630,34 @@ function deletePlan(id) {
 }
 
 function logPlanSession(name) {
+  // Mark as completed
+  const t=today();
+  if(!db.completedSessions) db.completedSessions={};
+  if(!db.completedSessions[t]) db.completedSessions[t]=[];
+  if(!db.completedSessions[t].includes(name)) { db.completedSessions[t].push(name); save(); }
   openModal("actModal");
   setTimeout(()=>{
     document.getElementById("actName").value=name;
     document.getElementById("actDur").focus();
   },100);
+}
+
+function isSessionDone(name) {
+  const days=[...Array(7)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()-i);return d.toISOString().slice(0,10);});
+  return days.some(d=>(db.completedSessions?.[d]||[]).some(s=>s.toLowerCase().includes(name.toLowerCase().split(" ")[0])));
+}
+
+function isSessionDoneByStrava(type, kmStr) {
+  const days=[...Array(7)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()-i);return d.toISOString().slice(0,10);});
+  const allActs=days.flatMap(d=>[...(db.activities[d]||[]),...(db.stravaCache[d]||[])]);
+  const t=type.toLowerCase();
+  if(t.includes("run")||t.includes("long")||t.includes("back")||t.includes("hill")||t.includes("easy")||t.includes("tempo")||t.includes("stride")||t.includes("shakeout")) {
+    const runs=allActs.filter(a=>(a.sport_type||a.type||"").toLowerCase().includes("run")||(a.name||"").toLowerCase().includes("run"));
+    if(kmStr) { const km=parseFloat(kmStr); return runs.some(a=>(a.distance_m?a.distance_m/1000:a.distance||0)>=km*0.8); }
+    return runs.length>0;
+  }
+  if(t.includes("swim")) return allActs.some(a=>(a.sport_type||a.type||"").toLowerCase().includes("swim"));
+  return isSessionDone(type);
 }
 
 // ── HISTORY ───────────────────────────────────────────────────────────────────
