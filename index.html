@@ -1462,15 +1462,19 @@ function renderSwimPlan(plan, cw) {
   </div>`;
   plan.weeks.forEach(w=>{
     const isCurrent=w.week===cw, isPast=w.week<cw;
+    const swimDone = isSessionComplete("swim "+w.target_m+"m", 0);
     html+=`<div style="display:flex;gap:10px;padding:9px 12px;background:var(--surface);border-radius:10px;margin-bottom:6px;border:1px solid ${isCurrent?"rgba(56,189,248,.3)":"var(--border)"}">
-      <div style="width:22px;height:22px;border-radius:50%;background:${isPast?"var(--green)":isCurrent?"var(--blue)":"var(--muted)"};display:flex;align-items:center;justify-content:center;flex-shrink:0">
-        <span style="font-size:10px;color:#fff;font-weight:700">${isPast?"✓":w.week}</span>
+      <div style="width:22px;height:22px;border-radius:50%;background:${swimDone?"var(--green)":isPast?"var(--muted)":isCurrent?"var(--blue)":"var(--muted)"};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <span style="font-size:10px;color:#fff;font-weight:700">${swimDone||isPast?"✓":w.week}</span>
       </div>
       <div style="flex:1">
-        <div style="font-size:12px;font-weight:600;color:${isCurrent?"var(--blue)":"var(--text)"}">${w.dates}</div>
+        <div style="font-size:12px;font-weight:600;color:${isCurrent?"var(--blue)":"var(--text)"}">${w.dates} · ${w.target_m}m</div>
         <div style="font-size:11px;color:var(--subtle)">${w.notes}</div>
       </div>
-      <div style="font-size:15px;font-weight:700;color:${isCurrent?"var(--blue)":"var(--subtle)"}">${w.target_m}m</div>
+      ${isCurrent?`<button onclick="logPlanSession('Open water swim ${w.target_m}m')"
+        style="background:${swimDone?"var(--green)":"rgba(56,189,248,.2)"};color:${swimDone?"#fff":"var(--blue)"};border:1px solid ${swimDone?"var(--green)":"rgba(56,189,248,.3)"};border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;flex-shrink:0">
+        ${swimDone?"✓ Done":"Log"}
+      </button>`:`<div style="font-size:15px;font-weight:700;color:var(--subtle)">${w.target_m}m</div>`}
     </div>`;
   });
   return html;
@@ -1487,7 +1491,7 @@ function renderStrengthPlan(plan) {
         </div>
         ${isStrengthSessionComplete(w.name)
           ?'<div style="background:var(--green);color:#fff;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:600">✓ Done</div>'
-          :`<button onclick="openStrengthSession('${w.name}',${JSON.stringify(w.exercises)})" style="background:rgba(167,139,250,.2);color:var(--purple2);border:1px solid rgba(167,139,250,.3);border-radius:8px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer">Log session</button>`}
+          :`<button onclick="openStrengthSession('${w.name}')" style="background:rgba(167,139,250,.2);color:var(--purple2);border:1px solid rgba(167,139,250,.3);border-radius:8px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer">Log session</button>`}
       </div>
       <div style="padding:0 14px">
         ${w.exercises.map(e=>`
@@ -1705,12 +1709,12 @@ function isRunSessionComplete(sessionName, targetKm) {
     return t.includes("run")||n.includes("run")||t.includes("walk")||n.includes("walk");
   });
   if(!runs.length) return false;
-  // If target km specified, check distance matches (80% threshold)
+  // MUST have a target km to match — don't auto-complete sessions without distance check
   if(targetKm && targetKm > 0) {
     return runs.some(a=>(a.distance_m?a.distance_m/1000:a.distance||0) >= targetKm*0.8);
   }
-  // Otherwise any run counts
-  return runs.length > 0;
+  // No km target = manual tick only (already checked completedSessions above)
+  return false;
 }
 
 function isStrengthSessionComplete(sessionName) {
@@ -1739,7 +1743,11 @@ function isSessionComplete(sessionName, targetKm) {
 // ── Strength Session Logger ───────────────────────────────────────────────────
 let currentStrengthSession = null; // {workoutName, exercises:[]}
 
-function openStrengthSession(workoutName, exercises) {
+function openStrengthSession(workoutName) {
+  // Look up exercises from the strength plan
+  const strengthPlan = TRAINING_PLANS.strength;
+  const workout = strengthPlan ? strengthPlan.workouts.find(w=>w.name===workoutName) : null;
+  const exercises = workout ? workout.exercises : [];
   currentStrengthSession = {
     workoutName,
     date: today(),
