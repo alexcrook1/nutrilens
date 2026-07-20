@@ -481,6 +481,23 @@ select.input{appearance:none}
   </div>
 </div>
 
+<!-- STRENGTH SESSION MODAL -->
+<div class="backdrop" id="strengthModal" style="display:none">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title" id="strengthModalTitle">💪 Log session</div>
+      <button class="modal-close" onclick="closeModal('strengthModal')">×</button>
+    </div>
+    <div class="xs c-subtle mb12" id="strengthModalDate"></div>
+    <div id="strengthExerciseList"></div>
+    <div id="strengthModalErr" class="err" style="display:none"></div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn btn-secondary f1" onclick="closeModal('strengthModal')">Cancel</button>
+      <button class="btn btn-primary f1" onclick="saveStrengthSession()" id="strengthSaveBtn">Save session</button>
+    </div>
+  </div>
+</div>
+
 <!-- NEW PLAN MODAL -->
 <div class="backdrop" id="newPlanModal" style="display:none">
   <div class="modal">
@@ -1367,6 +1384,7 @@ function renderAlpsPlan(plan, cw) {
     const isCurrent = w.week === cw;
     const isPast = w.week < cw;
     const isOpen = w.week === expandedWeek;
+    const adapt = getWeekAdaptation("alps50k", w.week);
 
     html+=`<div style="background:var(--surface);border:1px solid ${isCurrent?"rgba(249,115,22,.4)":isPast?"rgba(45,212,191,.2)":"var(--border)"};border-radius:14px;margin-bottom:8px;overflow:hidden">
       <div class="week-header ${isCurrent?"current":""}" style="padding:12px 14px"
@@ -1412,6 +1430,11 @@ function renderAlpsPlan(plan, cw) {
           <div style="font-size:10px;font-weight:700;color:var(--orange);margin-bottom:4px">💡 Key tip</div>
           <div style="font-size:12px;color:var(--text);line-height:1.5">${w.keyTip}</div>
         </div>
+        ${adapt?`<div style="background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);border-radius:10px;padding:10px 12px;margin-top:8px">
+          <div style="font-size:10px;font-weight:700;color:var(--blue);margin-bottom:4px">📊 Week ${w.week} review</div>
+          <div style="font-size:12px;color:var(--text);line-height:1.5">${adapt.note}</div>
+          ${adapt.notes&&adapt.notes.length?`<div style="margin-top:6px">${adapt.notes.slice(0,3).map(n=>`<div style="font-size:11px;color:var(--secondary);padding:2px 0">· ${n}</div>`).join("")}</div>`:""}
+        </div>`:""}
       </div>`:""}
     </div>`;
   });
@@ -1464,7 +1487,7 @@ function renderStrengthPlan(plan) {
         </div>
         ${isStrengthSessionComplete(w.name)
           ?'<div style="background:var(--green);color:#fff;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:600">✓ Done</div>'
-          :`<button onclick="logPlanSession('${w.name}')" style="background:rgba(167,139,250,.2);color:var(--purple2);border:1px solid rgba(167,139,250,.3);border-radius:8px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer">Log session</button>`}
+          :`<button onclick="openStrengthSession('${w.name}',${JSON.stringify(w.exercises)})" style="background:rgba(167,139,250,.2);color:var(--purple2);border:1px solid rgba(167,139,250,.3);border-radius:8px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer">Log session</button>`}
       </div>
       <div style="padding:0 14px">
         ${w.exercises.map(e=>`
@@ -1711,6 +1734,181 @@ function isSessionComplete(sessionName, targetKm) {
     return allActs.some(a=>(a.sport_type||a.type||a.name||"").toLowerCase().includes("swim"));
   }
   return isRunSessionComplete(sessionName, targetKm);
+}
+
+// ── Strength Session Logger ───────────────────────────────────────────────────
+let currentStrengthSession = null; // {workoutName, exercises:[]}
+
+function openStrengthSession(workoutName, exercises) {
+  currentStrengthSession = {
+    workoutName,
+    date: today(),
+    exercises: exercises.map(e => ({
+      name: e.name,
+      sets: e.sets,
+      targetReps: e.reps,
+      done: true, // default to done, user can untick
+      weight: getLastWeight(e.name),
+      reps: e.reps,
+      notes: ""
+    }))
+  };
+
+  document.getElementById("strengthModalTitle").textContent = "💪 " + workoutName;
+  document.getElementById("strengthModalDate").textContent = new Date().toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});
+  renderStrengthExercises();
+  document.getElementById("strengthModal").style.display = "flex";
+}
+
+function getLastWeight(exerciseName) {
+  // Find the most recent logged weight for this exercise
+  const entries = Object.entries(db.strengthLog||{}).sort(([a],[b])=>b.localeCompare(a));
+  for(const [date, sessions] of entries) {
+    for(const session of Object.values(sessions)) {
+      const ex = (session.exercises||[]).find(e=>e.name===exerciseName);
+      if(ex && ex.weight) return ex.weight;
+    }
+  }
+  return "";
+}
+
+function getLastReps(exerciseName) {
+  const entries = Object.entries(db.strengthLog||{}).sort(([a],[b])=>b.localeCompare(a));
+  for(const [date, sessions] of entries) {
+    for(const session of Object.values(sessions)) {
+      const ex = (session.exercises||[]).find(e=>e.name===exerciseName);
+      if(ex && ex.reps) return ex.reps;
+    }
+  }
+  return "";
+}
+
+function renderStrengthExercises() {
+  if(!currentStrengthSession) return;
+  const list = document.getElementById("strengthExerciseList");
+  list.innerHTML = currentStrengthSession.exercises.map((e,i) => {
+    const lastW = getLastWeight(e.name);
+    const lastR = getLastReps(e.name);
+    return `<div style="background:var(--surface2);border-radius:12px;padding:12px;margin-bottom:8px;opacity:${e.done?1:0.5};transition:opacity .2s">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--bright)">${e.name}</div>
+          <div style="font-size:11px;color:var(--subtle)">${e.sets} sets × ${e.targetReps}${lastW?` · last: ${lastW}kg × ${lastR}`:""}</div>
+        </div>
+        <button onclick="toggleExercise(${i})"
+          style="width:32px;height:32px;border-radius:50%;border:2px solid ${e.done?"var(--green)":"var(--red)"};background:${e.done?"rgba(45,212,191,.15)":"rgba(244,96,96,.15)"};color:${e.done?"var(--green)":"var(--red)"};font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          ${e.done?"✓":"✗"}
+        </button>
+      </div>
+      ${e.done?`<div style="display:flex;gap:8px">
+        <div style="flex:1">
+          <label style="font-size:10px;color:var(--subtle);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px">Weight (kg)</label>
+          <input type="number" inputmode="decimal" value="${e.weight||""}" placeholder="${lastW||"kg"}"
+            oninput="currentStrengthSession.exercises[${i}].weight=this.value"
+            style="width:100%;background:var(--muted);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-size:13px">
+        </div>
+        <div style="flex:1">
+          <label style="font-size:10px;color:var(--subtle);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px">Reps done</label>
+          <input type="text" value="${e.reps||""}" placeholder="${e.targetReps}"
+            oninput="currentStrengthSession.exercises[${i}].reps=this.value"
+            style="width:100%;background:var(--muted);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-size:13px">
+        </div>
+        <div style="flex:2">
+          <label style="font-size:10px;color:var(--subtle);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px">Notes</label>
+          <input type="text" value="${e.notes||""}" placeholder="optional"
+            oninput="currentStrengthSession.exercises[${i}].notes=this.value"
+            style="width:100%;background:var(--muted);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-size:13px">
+        </div>
+      </div>`:""}
+    </div>`;
+  }).join("");
+}
+
+function toggleExercise(i) {
+  if(!currentStrengthSession) return;
+  currentStrengthSession.exercises[i].done = !currentStrengthSession.exercises[i].done;
+  renderStrengthExercises();
+}
+
+function saveStrengthSession() {
+  if(!currentStrengthSession) return;
+  const t = currentStrengthSession.date;
+  if(!db.strengthLog) db.strengthLog = {};
+  if(!db.strengthLog[t]) db.strengthLog[t] = {};
+  db.strengthLog[t][currentStrengthSession.workoutName] = {
+    exercises: currentStrengthSession.exercises,
+    completedAt: new Date().toISOString()
+  };
+  // Mark session as completed
+  if(!db.completedSessions) db.completedSessions = {};
+  if(!db.completedSessions[t]) db.completedSessions[t] = [];
+  if(!db.completedSessions[t].includes(currentStrengthSession.workoutName)) {
+    db.completedSessions[t].push(currentStrengthSession.workoutName);
+  }
+  // Sync to Google Sheets
+  const rows = currentStrengthSession.exercises.map(e=>[
+    new Date().toISOString(), t, currentStrengthSession.workoutName,
+    e.name, e.done?"done":"skipped", e.weight||"", e.reps||"", e.notes||""
+  ]);
+  syncToSheets("Strength", rows);
+  save();
+  closeModal("strengthModal");
+  render();
+}
+
+// ── Weekly plan adaptation ─────────────────────────────────────────────────────
+function getWeekAdaptation(planId, weekNum) {
+  return (db.weeklyAdaptation?.[planId]?.[weekNum]) || null;
+}
+
+function runWeeklyAdaptation() {
+  // Run every Sunday or when explicitly triggered
+  const cw = currentTrainingWeek();
+  if(cw < 1 || cw > 6) return;
+
+  const weekDays = [...Array(7)].map((_,i)=>{
+    const d=new Date(); d.setDate(d.getDate()-i);
+    return d.toISOString().slice(0,10);
+  }).filter(d=>d>="2026-07-20");
+
+  // ── Running adaptation ──
+  const allActs = weekDays.flatMap(d=>[...(db.activities[d]||[]),...(db.stravaCache[d]||[])]);
+  const runs = allActs.filter(a=>(a.sport_type||a.type||"").toLowerCase().includes("run")||(a.name||"").toLowerCase().includes("run"));
+  const weekKm = runs.reduce((s,a)=>s+(a.distance_m?a.distance_m/1000:a.distance||0),0);
+  const targetKm = TRAINING_PLANS.alps50k.weeks[cw-1]?.totalKm||48;
+  const pct = weekKm/targetKm;
+
+  let runNote = "";
+  if(pct >= 0.9) runNote = "Strong week — "+weekKm.toFixed(0)+"km logged. Progressing to Week "+(cw+1)+" as planned.";
+  else if(pct >= 0.7) runNote = "Solid week — "+weekKm.toFixed(0)+"km of "+targetKm+"km target. Minor adjustment next week.";
+  else if(pct >= 0.5) runNote = "Light week — "+weekKm.toFixed(0)+"km of "+targetKm+"km target. Week "+(cw+1)+" volume reduced slightly.";
+  else runNote = "Easy week — "+weekKm.toFixed(0)+"km logged. Consider repeating week "+cw+" focus before moving on.";
+
+  // ── Strength adaptation ──
+  const strengthNotes = [];
+  const latestStrength = Object.entries(db.strengthLog||{})
+    .filter(([d])=>weekDays.includes(d))
+    .flatMap(([,sessions])=>Object.values(sessions))
+    .flatMap(s=>s.exercises||[]);
+
+  latestStrength.forEach(e=>{
+    if(!e.done) { strengthNotes.push(e.name+" was skipped"); return; }
+    if(e.weight && e.reps) {
+      const targetReps = parseInt(e.targetReps)||10;
+      const doneReps = parseInt(e.reps)||0;
+      if(doneReps >= targetReps) strengthNotes.push(e.name+": hit target at "+e.weight+"kg — consider +2.5kg next week");
+      else if(doneReps >= targetReps*0.8) strengthNotes.push(e.name+": close to target at "+e.weight+"kg × "+e.reps);
+      else strengthNotes.push(e.name+": below target — keep "+e.weight+"kg next week");
+    }
+  });
+
+  // Store adaptation
+  if(!db.weeklyAdaptation) db.weeklyAdaptation={};
+  if(!db.weeklyAdaptation.alps50k) db.weeklyAdaptation.alps50k={};
+  if(!db.weeklyAdaptation.strength) db.weeklyAdaptation.strength={};
+  db.weeklyAdaptation.alps50k[cw]={note:runNote, km:weekKm.toFixed(0), target:targetKm, pct:Math.round(pct*100)};
+  db.weeklyAdaptation.strength[cw]={notes:strengthNotes};
+  save();
 }
 
 // ── HISTORY ───────────────────────────────────────────────────────────────────
