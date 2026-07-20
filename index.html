@@ -723,7 +723,7 @@ const TRAINING_PLANS = {
 };
 
 function currentTrainingWeek() {
-  const start = new Date("2026-07-19");
+  const start = new Date("2026-07-20"); // Plan restarts today
   const now = new Date();
   const diff = Math.floor((now - start) / (7*24*60*60*1000));
   return Math.min(Math.max(diff + 1, 1), 6);
@@ -773,6 +773,12 @@ if(!db.profile.startWeight) {
 if(db.customPlans) {
   Object.values(db.customPlans).forEach(plan => {
     TRAINING_PLANS[plan.id] = plan;
+  });
+}
+// Clear completions before plan restart date (Jul 20)
+if(db.completedSessions) {
+  Object.keys(db.completedSessions).forEach(d=>{
+    if(d < "2026-07-20") delete db.completedSessions[d];
   });
 }
 
@@ -1379,7 +1385,7 @@ function renderAlpsPlan(plan, cw) {
       ${isOpen?`<div style="padding:0 14px 14px;border-top:1px solid var(--border)">
         <div style="font-size:11px;color:var(--secondary);padding:10px 0;font-style:italic">${w.theme}</div>
         ${w.runs.map(r=>`
-          ${(()=>{const done=isSessionComplete(r.type+" "+r.target);return `
+          ${(()=>{const kmMatch=r.target.match(/([0-9.]+)\s*km/);const tkm=kmMatch?parseFloat(kmMatch[1]):0;const done=isSessionComplete(r.type+" "+r.target,tkm);return `
           <div class="session-tile${done?" completed":""}" onclick="logPlanSession('${r.type} ${r.target}')">
             <div style="display:flex;justify-content:space-between;align-items:flex-start">
               <div style="flex:1">
@@ -1659,21 +1665,52 @@ function logPlanSession(name) {
   setTimeout(()=>{ document.getElementById("actName").value=name; document.getElementById("actDur").focus(); },100);
 }
 
-function isSessionComplete(sessionName) {
-  const days7=[...Array(7)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()-i);return d.toISOString().slice(0,10);});
+function isRunSessionComplete(sessionName, targetKm) {
+  // Only ticks from Strava uploads (distance-based) or manual tap
+  // Plan restarts Jul 20 - only count activities from that date
+  const planStart = "2026-07-20";
+  const days7=[...Array(7)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()-i);return d.toISOString().slice(0,10);})    .filter(d=>d>=planStart);
   const sn=sessionName.toLowerCase();
   const key=sn.replace(/[^a-z]/g,"").slice(0,8);
+  // Check manual completions (tapped Log)
   if(days7.some(d=>(db.completedSessions?.[d]||[]).some(s=>s.toLowerCase().replace(/[^a-z]/g,"").slice(0,8)===key))) return true;
+  // Check Strava/activity for matching run with distance
   const allActs=days7.flatMap(d=>[...(db.activities[d]||[]),...(db.stravaCache[d]||[])]);
-  if(sn.includes("run")||sn.includes("long")||sn.includes("hill")||sn.includes("easy")||sn.includes("tempo")||sn.includes("stride")||sn.includes("back")||sn.includes("shakeout"))
-    return allActs.some(a=>(a.sport_type||a.type||a.name||"").toLowerCase().includes("run"));
-  if(sn.includes("swim")) return allActs.some(a=>(a.sport_type||a.type||a.name||"").toLowerCase().includes("swim"));
-  if(sn.includes("push")||sn.includes("core")||sn.includes("chest")||sn.includes("abs")||sn.includes("bench")||sn.includes("strength")||sn.includes("gym")||sn.includes("weight"))
-    return allActs.some(a=>{const n=(a.name||"").toLowerCase(),st=(a.sport_type||a.type||"").toLowerCase();
-      return n.includes("push")||n.includes("core")||n.includes("chest")||n.includes("abs")||n.includes("bench")||
-             n.includes("weight")||n.includes("strength")||n.includes("gym")||n.includes("workout")||
-             st.includes("weight")||st.includes("workout");});
-  return false;
+  const runs=allActs.filter(a=>{
+    const t=(a.sport_type||a.type||"").toLowerCase();
+    const n=(a.name||"").toLowerCase();
+    return t.includes("run")||n.includes("run")||t.includes("walk")||n.includes("walk");
+  });
+  if(!runs.length) return false;
+  // If target km specified, check distance matches (80% threshold)
+  if(targetKm && targetKm > 0) {
+    return runs.some(a=>(a.distance_m?a.distance_m/1000:a.distance||0) >= targetKm*0.8);
+  }
+  // Otherwise any run counts
+  return runs.length > 0;
+}
+
+function isStrengthSessionComplete(sessionName) {
+  // Only ticks when manually marked — never auto from Strava
+  const days7=[...Array(7)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()-i);return d.toISOString().slice(0,10);});
+  const key=sessionName.toLowerCase().replace(/[^a-z]/g,"").slice(0,10);
+  return days7.some(d=>(db.completedSessions?.[d]||[]).some(s=>s.toLowerCase().replace(/[^a-z]/g,"").slice(0,10)===key));
+}
+
+function isSessionComplete(sessionName, targetKm) {
+  const sn=sessionName.toLowerCase();
+  if(sn.includes("push")||sn.includes("core")||sn.includes("chest")||sn.includes("abs")||
+     sn.includes("bench")||sn.includes("strength")||sn.includes("gym")||sn.includes("weight")) {
+    return isStrengthSessionComplete(sessionName);
+  }
+  if(sn.includes("swim")) {
+    const days7=[...Array(7)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()-i);return d.toISOString().slice(0,10);}).filter(d=>d>="2026-07-20");
+    const key=sn.replace(/[^a-z]/g,"").slice(0,8);
+    if(days7.some(d=>(db.completedSessions?.[d]||[]).some(s=>s.toLowerCase().replace(/[^a-z]/g,"").slice(0,8)===key))) return true;
+    const allActs=days7.flatMap(d=>[...(db.activities[d]||[]),...(db.stravaCache[d]||[])]);
+    return allActs.some(a=>(a.sport_type||a.type||a.name||"").toLowerCase().includes("swim"));
+  }
+  return isRunSessionComplete(sessionName, targetKm);
 }
 
 // ── HISTORY ───────────────────────────────────────────────────────────────────
